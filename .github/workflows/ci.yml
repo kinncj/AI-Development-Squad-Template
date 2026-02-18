@@ -43,6 +43,11 @@ jobs:
       - name: ai-squad swarm help
         run: ./scripts/ai-squad swarm help
 
+      - name: Configure git identity for CI
+        run: |
+          git config --global user.email "ai-squad@noreply"
+          git config --global user.name "AI Development Squad"
+
       - name: ai-squad init (no labels)
         run: $GITHUB_WORKSPACE/scripts/ai-squad init --yes /tmp/test-init
 
