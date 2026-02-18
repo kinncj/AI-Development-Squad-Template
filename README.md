@@ -9,6 +9,9 @@
 
 ```
 
+[![CI](https://github.com/kinncj/AI-Development-Squad-Template/actions/workflows/ci.yml/badge.svg)](https://github.com/kinncj/AI-Development-Squad-Template/actions/workflows/ci.yml)
+[![Integration Validation](https://github.com/kinncj/AI-Development-Squad-Template/actions/workflows/validate-integrations.yml/badge.svg)](https://github.com/kinncj/AI-Development-Squad-Template/actions/workflows/validate-integrations.yml)
+
 A production-ready template for running an **orchestrated, phase-gated, TDD-enforced** development pipeline with 27 specialist AI agents. Designed to work on two platforms simultaneously: **Claude Code** (Claude Code Max) and **OpenCode** (GitHub Copilot Enterprise).
 
 > **Based on:** [Building an AI Development Squad: Orchestrated Multi-Agent Systems with Claude Code and OpenCode](./ARTICLE.md)

@@ -9,7 +9,6 @@ on:
 
 # These jobs validate that the agent and skill definitions are structurally
 # compatible with Claude Code and OpenCode. Full LLM invocations require
-# secrets and run only when ANTHROPIC_API_KEY is set.
 
 jobs:
   # ─── Claude Code agent syntax ──────────────────────────────────────────────
@@ -45,10 +44,7 @@ jobs:
           git config --global user.email "ai-squad@noreply"
           git config --global user.name "AI Development Squad"
 
-      - name: Smoke-test Claude Code CLI (requires ANTHROPIC_API_KEY)
-        if: env.ANTHROPIC_API_KEY != ''
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: Smoke-test Claude Code CLI
         run: |
           cd /tmp
           $GITHUB_WORKSPACE/scripts/ai-squad init --yes test-smoke
@@ -97,10 +93,7 @@ jobs:
           echo "OpenCode skills:"
           ls template/.opencode/skills/
 
-      - name: Smoke-test OpenCode CLI (requires ANTHROPIC_API_KEY)
-        if: env.ANTHROPIC_API_KEY != ''
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: Smoke-test OpenCode CLI
         run: |
           opencode --version 2>/dev/null || echo "OpenCode not available in this runner."
         continue-on-error: true
