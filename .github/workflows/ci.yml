@@ -45,6 +45,7 @@ jobs:
 
       - name: ai-squad init (no labels)
         run: |
+          rm -rf /tmp/test-init
           mkdir /tmp/test-init
           cd /tmp/test-init
           printf "n\n" | $GITHUB_WORKSPACE/scripts/ai-squad init

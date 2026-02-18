@@ -5,6 +5,10 @@
 #
 # Copyright (C) 2025 Kinn Coelho Juliao <kinncj@protonmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
+
+# shellcheck disable=SC2034  # Color variables may appear unused but are used in printf
+# shellcheck disable=SC2059  # Intentional: printf with color variables
+
 set -euo pipefail
 
 # ─── Colour palette ───────────────────────────────────────────────────────────

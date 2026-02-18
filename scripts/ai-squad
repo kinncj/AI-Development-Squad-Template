@@ -16,6 +16,10 @@
 #
 # Copyright (C) 2025 Kinn Coelho Juliao <kinncj@protonmail.com>
 # SPDX-License-Identifier: AGPL-3.0-or-later
+
+# shellcheck disable=SC2059  # Intentional: printf with color variables
+# shellcheck disable=SC2155  # Intentional: declare and assign pattern used for brevity
+
 set -euo pipefail
 
 TOOL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
