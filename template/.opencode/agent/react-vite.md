@@ -7,6 +7,13 @@ tools:
   write: true
   edit: true
   bash: true
+  read: true
+  grep: true
+  glob: true
+  list: true
+  todowrite: true
+  todoread: true
+  webfetch: false
 permission:
   edit: ask
   bash:

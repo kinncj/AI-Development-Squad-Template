@@ -326,7 +326,7 @@ _oc_replace_all() {
 
 _configure_opencode_models() {
   local TARGET="$1"
-  local AGENTS_DIR="$TARGET/.opencode/agents"
+  local AGENTS_DIR="$TARGET/.opencode/agent"
   local OC_JSON="$TARGET/opencode.json"
 
   [[ -d "$AGENTS_DIR" ]] || return 0
