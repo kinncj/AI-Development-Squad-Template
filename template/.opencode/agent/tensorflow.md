@@ -1,7 +1,7 @@
 ---
 description: TensorFlow/Keras ML model implementation, training pipelines, and model export.
 mode: subagent
-model: github-copilot/claude-sonnet-4.6
+model: github-copilot/claude-sonnet-4.5
 temperature: 0.2
 tools:
   write: true

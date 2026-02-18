@@ -343,19 +343,36 @@ _configure_opencode_models() {
   read -r _ans
   [[ "$_ans" =~ ^[Yy]$ ]] && HAS_COPILOT=1
 
+  local COPILOT_SONNET="claude-sonnet-4.5"
+  local COPILOT_OPUS="claude-opus-4.5"
+
+  if [[ -n "$HAS_COPILOT" ]]; then
+    printf '%b' "  ${CYN}?${R}  Do you have access to ${B}Claude Sonnet 4.6${R} in GitHub Copilot? [y/N] "
+    read -r _ans
+    [[ "$_ans" =~ ^[Yy]$ ]] && COPILOT_SONNET="claude-sonnet-4.6"
+
+    printf '%b' "  ${CYN}?${R}  Do you have access to ${B}Claude Opus 4.6${R} in GitHub Copilot? [y/N] "
+    read -r _ans
+    [[ "$_ans" =~ ^[Yy]$ ]] && COPILOT_OPUS="claude-opus-4.6"
+  fi
+
   local _provider
 
   if [[ -n "$HAS_ANTHROPIC" && -n "$HAS_COPILOT" ]]; then
-    # Both: keep template defaults (anthropic/* for orchestration, copilot/* for impl)
-    ok "Both providers" "anthropic/* orchestration · github-copilot/* implementation"
+    # Both: keep anthropic defaults for orchestration; upgrade copilot impl models if available
+    _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+      "github-copilot/claude-sonnet-4.5" "github-copilot/${COPILOT_SONNET}"
+    _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+      "github-copilot/claude-opus-4.5"   "github-copilot/${COPILOT_OPUS}"
+    ok "Both providers" "anthropic/* orchestration · github-copilot/${COPILOT_SONNET} implementation"
     _provider="both"
 
   elif [[ -n "$HAS_ANTHROPIC" ]]; then
     # Anthropic API only — route everything through anthropic/
     _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
-      "github-copilot/claude-sonnet-4.6" "anthropic/claude-sonnet-4-6"
+      "github-copilot/claude-sonnet-4.5" "anthropic/claude-sonnet-4-6"
     _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
-      "github-copilot/claude-opus-4.6"   "anthropic/claude-opus-4-6"
+      "github-copilot/claude-opus-4.5"   "anthropic/claude-opus-4-6"
     _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
       "copilot/gpt-4.1"                  "anthropic/claude-sonnet-4-6"
     ok "Anthropic only" "anthropic/claude-opus-4-6 · anthropic/claude-sonnet-4-6"
@@ -364,10 +381,14 @@ _configure_opencode_models() {
   elif [[ -n "$HAS_COPILOT" ]]; then
     # GitHub Copilot only — route everything through github-copilot/
     _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
-      "anthropic/claude-opus-4-6"   "github-copilot/claude-opus-4.6"
+      "anthropic/claude-opus-4-6"        "github-copilot/${COPILOT_OPUS}"
     _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
-      "anthropic/claude-sonnet-4-6" "github-copilot/claude-sonnet-4.6"
-    ok "GitHub Copilot only" "github-copilot/claude-opus-4.6 · github-copilot/claude-sonnet-4.6"
+      "anthropic/claude-sonnet-4-6"      "github-copilot/${COPILOT_SONNET}"
+    _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+      "github-copilot/claude-sonnet-4.5" "github-copilot/${COPILOT_SONNET}"
+    _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+      "github-copilot/claude-opus-4.5"   "github-copilot/${COPILOT_OPUS}"
+    ok "GitHub Copilot only" "github-copilot/${COPILOT_OPUS} · github-copilot/${COPILOT_SONNET}"
     _provider="copilot"
 
   else
@@ -428,11 +449,11 @@ _configure_opencode_models() {
       _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
         "anthropic/claude-opus-4-6"        "$BIG_MODEL"
       _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
-        "github-copilot/claude-opus-4.6"   "$BIG_MODEL"
+        "github-copilot/claude-opus-4.5"   "$BIG_MODEL"
       _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
         "anthropic/claude-sonnet-4-6"      "$FAST_MODEL"
       _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
-        "github-copilot/claude-sonnet-4.6" "$FAST_MODEL"
+        "github-copilot/claude-sonnet-4.5" "$FAST_MODEL"
       _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
         "copilot/gpt-4.1"                  "$FAST_MODEL"
       ok "Models configured" "${BIG_MODEL} · ${FAST_MODEL}"

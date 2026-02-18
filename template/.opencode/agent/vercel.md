@@ -1,7 +1,7 @@
 ---
 description: Deployment, edge functions, and platform configuration for Vercel.
 mode: subagent
-model: github-copilot/claude-sonnet-4.6
+model: github-copilot/claude-sonnet-4.5
 temperature: 0.15
 tools:
   write: true
