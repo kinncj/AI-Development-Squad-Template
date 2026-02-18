@@ -2124,20 +2124,12 @@ services:
 {
   "$schema": "https://opencode.ai/config.json",
   "theme": "catppuccin",
-  "model": {
-    "default": "copilot/claude-sonnet-4-6"
-  },
-  "agent": {
-    "default": "orchestrator"
-  },
-  "providers": {
-    "copilot": {
-      "enabled": true
-    },
-    "anthropic": {
-      "enabled": true
-    }
-  },
+  "model": "anthropic/claude-sonnet-4-6",
+  "default_agent": "orchestrator",
+  "instructions": [
+    "AGENTS.md",
+    "CLAUDE.md"
+  ],
   "permission": {
     "edit": "ask",
     "bash": {
@@ -2305,7 +2297,7 @@ export default defineConfig({
 |---|---|
 | **Agents** | 27 (1 orchestrator, 2 discovery, 1 QA, 5 backend, 2 frontend, 3 infrastructure, 5 services, 2 data, 5 ML, 1 docs) |
 | **Phases** | 8 |
-| **Commands** | 4 (`/feature`, `/bugfix`, `/validate`, `/tdd`) |
+| **Commands** | 5 (`/feature`, `/build-feature`, `/bugfix`, `/validate`, `/tdd`) |
 | **Skills** | 17 (3 process, 3 output, 11 tool/CLI wrappers including GitHub CLI) |
 | **MCP Servers** | 1 (Context7 only — Playwright moved to CLI+Skill) |
 | **CLI Tools** | 20+ (dotnet, mvn, npm, bun, python, docker, kubectl, terraform, playwright-cli, stripe, supabase, vercel, jupyter, etc.) |

@@ -9,12 +9,11 @@ set -euo pipefail
 
 # ─── Colour palette ───────────────────────────────────────────────────────────
 if [[ -n "${NO_COLOR:-}" || "${TERM:-}" == "dumb" || ! -t 1 ]]; then
-  R=''; B=''; D=''; GRN=''; YLW=''; CYN=''
-  BGRN=''; BRED=''; BYEL=''; BCYN=''; BMGT=''
+  R=''; B=''; D=''
+  BGRN=''; BRED=''; BCYN=''; BMGT=''
 else
   R='\033[0m';    B='\033[1m';    D='\033[2m'
-  GRN='\033[0;32m';  YLW='\033[0;33m';  CYN='\033[0;36m'
-  BGRN='\033[1;32m'; BRED='\033[1;31m'; BYEL='\033[1;33m'
+  BGRN='\033[1;32m'; BRED='\033[1;31m'
   BCYN='\033[1;36m'; BMGT='\033[1;35m'
 fi
 
@@ -109,4 +108,4 @@ fi
 
 # Summary
 printf "\n%b\n" "$HR"
-printf "  ${BGRN}✓${R}  ${B}Test database seeded.${R}\n\n"
+printf '%s\n\n' "  ${BGRN}✓${R}  ${B}Test database seeded.${R}"

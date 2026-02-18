@@ -44,10 +44,7 @@ jobs:
         run: ./scripts/ai-squad swarm help
 
       - name: ai-squad init (no labels)
-        run: |
-          mkdir /tmp/test-init
-          cd /tmp/test-init
-          printf "n\n" | $GITHUB_WORKSPACE/scripts/ai-squad init
+        run: $GITHUB_WORKSPACE/scripts/ai-squad init --yes /tmp/test-init
 
       - name: Verify init output
         run: bash tests/cli/test_ai_squad.sh

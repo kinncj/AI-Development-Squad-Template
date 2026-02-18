@@ -59,9 +59,9 @@ banner() {
 
   # Subsequent calls (e.g. swarm help after init): print statically, no re-animation
   if [[ -n "$_BANNER_DONE" ]]; then
-    printf "${HGRN}"
+    printf '%b' "${HGRN}"
     local _r; for _r in "${_BANNER_ROWS[@]}"; do printf '%s\n' "$_r"; done
-    printf "${R}"
+    printf '%b' "${R}"
     return
   fi
   _BANNER_DONE=1
@@ -71,7 +71,7 @@ banner() {
 
   # ── Frame 0: edge-on ─────────────────────────────────────────────────────
   # Single dim line at mid-height simulates the card seen edge-on.
-  printf "\033[${N}A"
+  printf '\033[%dA' "${N}"
   for ((_i=0; _i<N; _i++)); do
     if ((_i == 3)); then
       printf '\033[2K%b\n' \
@@ -89,8 +89,8 @@ banner() {
   for _f in 2 1 0; do
     _top=$((_f + 1))        # first visible content index
     _rows=$((6 - 2 * _f))  # rows to reveal: 2, 4, 6
-    printf "\033[${N}A"
-    printf "${HGRN}"
+    printf '\033[%dA' "${N}"
+    printf '%b' "${HGRN}"
     for ((_i=0; _i<N; _i++)); do
       if ((_i >= _top && _i < _top + _rows)); then
         printf '\033[2K%s\n' "${_BANNER_ROWS[$_i]}"
@@ -101,7 +101,7 @@ banner() {
     sleep 0.07
   done
 
-  printf "${R}"
+  printf '%b' "${R}"
 }
 
 # ─── UI primitives ────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ session_info() {
   local session="$1"
   printf "\n%b\n" "$HR"
   printf "  ${CYN}›${R}  Session   ${B}%s${R}\n" "$session"
-  printf "  ${D}›  Detach   Ctrl-b d${R}\n"
+  printf '%b\n' "  ${D}›  Detach   Ctrl-b d${R}"
   printf "  ${D}›  Kill     tmux kill-session -t %s${R}\n" "$session"
   printf "%b\n\n" "$HR"
 }
@@ -301,7 +301,18 @@ PYEOF
 
 # ─── init ─────────────────────────────────────────────────────────────────────
 cmd_init() {
-  local TARGET_DIR
+  local TARGET_DIR ASSUME_YES=''
+
+  # Parse flags before positional argument
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --yes|-y) ASSUME_YES=1; shift ;;
+      --) shift; break ;;
+      -*) fail "Unknown flag: $1" ;;
+      *) break ;;
+    esac
+  done
+
   if [[ $# -gt 0 ]]; then
     if [[ "$1" = /* ]]; then
       TARGET_DIR="$1"
@@ -318,9 +329,13 @@ cmd_init() {
 
   if [[ -d "$TARGET_DIR" ]] && [[ -n "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]]; then
     warn "Directory is not empty: $TARGET_DIR"
-    printf "  ${BYEL}?${R}  Existing files may be overwritten. Continue? [y/N] "
-    read -r _ans
-    [[ "$_ans" =~ ^[Yy]$ ]] || fail "Aborted."
+    if [[ -n "$ASSUME_YES" ]]; then
+      warn "Proceeding (--yes)"
+    else
+      printf '%b' "  ${BYEL}?${R}  Existing files may be overwritten. Continue? [y/N] "
+      read -r _ans
+      [[ "$_ans" =~ ^[Yy]$ ]] || fail "Aborted."
+    fi
   fi
 
   mkdir -p "$TARGET_DIR"
@@ -376,10 +391,12 @@ Source:    $(basename "$TOOL_DIR")"
   fi
 
   printf "\n%b\n" "$HR"
-  printf "  ${CYN}?${R}  Bootstrap GitHub labels? ${D}(requires gh auth + remote repo)${R} [y/N] "
-  read -r _ans
-  if [[ "$_ans" =~ ^[Yy]$ ]]; then
-    cmd_labels
+  if [[ -z "$ASSUME_YES" ]]; then
+    printf '%b' "  ${CYN}?${R}  Bootstrap GitHub labels? ${D}(requires gh auth + remote repo)${R} [y/N] "
+    read -r _ans
+    if [[ "$_ans" =~ ^[Yy]$ ]]; then
+      cmd_labels
+    fi
   fi
 
   local PROJECT_NAME
@@ -387,11 +404,11 @@ Source:    $(basename "$TOOL_DIR")"
 
   printf "\n%b\n" "$HR"
   printf "  ${BGRN}✓${R}  ${B}Squad ready${R}  ${D}→${R}  %s\n\n" "$TARGET_DIR"
-  printf "  ${D}Next steps:${R}\n"
+  printf '%b\n' "  ${D}Next steps:${R}"
   [[ "$TARGET_DIR" != "$(pwd)" ]] && \
     printf "  ${BCYN}›${R}  ${D}cd${R} ${B}%s${R}\n" "$PROJECT_NAME"
   printf "  ${BCYN}›${R}  ${D}gh repo create${R} ${B}%s${R} ${D}--public --push --source=.${R}\n" "$PROJECT_NAME"
-  printf "  ${BCYN}›${R}  ${D}claude${R} ${B}/feature${R} ${D}\"your first feature\"${R}\n"
+  printf '%b\n' "  ${BCYN}›${R}  ${D}claude${R} ${B}/feature${R} ${D}\"your first feature\"${R}"
   printf "\n%b\n\n" "$HR"
 }
 
@@ -421,7 +438,7 @@ cmd_labels() {
     fi
   }
 
-  printf "  ${B}${BCYN}Story & Type${R}\n"
+  printf '%b\n' "  ${B}${BCYN}Story & Type${R}"
   label "story"        "0075ca" "User story"
   label "bug"          "d73a4a" "Bug report"
   label "must-have"    "e11d48" "MoSCoW: Must have"
@@ -429,7 +446,7 @@ cmd_labels() {
   label "could-have"   "eab308" "MoSCoW: Could have"
   label "wont-have"    "6b7280" "MoSCoW: Won't have"
 
-  printf "\n  ${B}${BCYN}Pipeline Phases${R}\n"
+  printf '\n%b\n' "  ${B}${BCYN}Pipeline Phases${R}"
   label "phase:discover"   "dbeafe" "Phase 1: Discovery"
   label "phase:architect"  "c7d2fe" "Phase 2: Architecture"
   label "phase:plan"       "e9d5ff" "Phase 3: Planning"
@@ -439,13 +456,13 @@ cmd_labels() {
   label "phase:document"   "fef3c7" "Phase 7: Documentation"
   label "phase:done"       "dcfce7" "Phase 8: Complete"
 
-  printf "\n  ${B}${BCYN}Status${R}\n"
+  printf '\n%b\n' "  ${B}${BCYN}Status${R}"
   label "in-progress"      "fde68a" "Work in progress"
   label "blocked"          "fca5a5" "Blocked — needs human intervention"
   label "validated"        "86efac" "All tests passing"
   label "ready-for-review" "a5f3fc" "PR ready for review"
 
-  printf "\n  ${B}${BCYN}TDD State${R}\n"
+  printf '\n%b\n' "  ${B}${BCYN}TDD State${R}"
   label "tdd:red"      "fca5a5" "Failing test written"
   label "tdd:green"    "86efac" "Tests passing"
   label "tdd:refactor" "fde68a" "Refactor phase"
@@ -454,9 +471,9 @@ cmd_labels() {
   _config_set "labels.last_run"  "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
   printf "\n%b\n" "$HR"
-  printf "  ${BGRN}✓${R}  ${B}Done.${R}  "
-  printf "${GRN}%d created${R}  ${D}·${R}  ${D}%d skipped${R}\n" "$CREATED" "$SKIPPED"
-  printf "  ${D}›  https://github.com/%s/labels${R}\n\n" "$REPO"
+  printf '%b' "  ${BGRN}✓${R}  ${B}Done.${R}  "
+  printf '%b%d created%b  %b·%b  %b%d skipped%b\n' "${GRN}" "$CREATED" "${R}" "${D}" "${R}" "${D}" "$SKIPPED" "${R}"
+  printf '  %b›  https://github.com/%s/labels%b\n\n' "${D}" "$REPO" "${R}"
 }
 
 # ─── swarm ────────────────────────────────────────────────────────────────────
@@ -495,7 +512,7 @@ cmd_swarm() {
 
   case "$sub" in
     full)
-      local SESSION="swarm-$(date +%s)"
+      local SESSION; SESSION="swarm-$(date +%s)"
       header "Swarm  —  Full Plan"
       _swarm_require_tmux
       _swarm_require_plan
@@ -539,7 +556,7 @@ cmd_swarm() {
     tasks)
       [[ $# -eq 0 ]] && fail "Specify task numbers.  Usage: ai-squad swarm tasks 1 3 5"
       local TASK_NUMS=("$@")
-      local SESSION="swarm-$(date +%s)"
+      local SESSION; SESSION="swarm-$(date +%s)"
 
       header "Swarm  —  Selected Tasks"
       _swarm_require_tmux
@@ -586,7 +603,7 @@ cmd_swarm() {
       [[ $# -lt 2 ]] && fail "Usage: ai-squad swarm agent @agent-name \"prompt\""
       local AGENT="$1"; shift
       local PROMPT="$*"
-      local SESSION="swarm-$(date +%s)"
+      local SESSION; SESSION="swarm-$(date +%s)"
 
       header "Swarm  —  Single Agent"
       _swarm_require_tmux
@@ -613,18 +630,18 @@ cmd_swarm() {
 
     help | *)
       banner
-      printf "  ${B}USAGE${R}\n\n"
-      printf "    ${D}ai-squad swarm${R} ${B}<subcommand>${R} ${D}[arguments]${R}\n\n"
+      printf '%b\n\n' "  ${B}USAGE${R}"
+      printf '%b\n\n' "    ${D}ai-squad swarm${R} ${B}<subcommand>${R} ${D}[arguments]${R}"
       printf "%b\n" "$HR"
-      printf "  ${BCYN}full${R}\n"
-      printf "  ${D}    Launch all unchecked tasks from:${R}\n"
-      printf "  ${D}    %s${R}\n\n" "$PLAN_FILE"
-      printf "  ${BCYN}tasks${R}  ${D}<n> [n...]${R}\n"
-      printf "  ${D}    Launch specific task numbers from the plan${R}\n\n"
-      printf "  ${BCYN}agent${R}  ${D}<@name> <prompt>${R}\n"
-      printf "  ${D}    Run a single named agent with a custom prompt${R}\n\n"
+      printf '%b\n' "  ${BCYN}full${R}"
+      printf '%b\n' "  ${D}    Launch all unchecked tasks from:${R}"
+      printf '  %b    %s%b\n\n' "${D}" "$PLAN_FILE" "${R}"
+      printf '%b\n' "  ${BCYN}tasks${R}  ${D}<n> [n...]${R}"
+      printf '%b\n\n' "  ${D}    Launch specific task numbers from the plan${R}"
+      printf '%b\n' "  ${BCYN}agent${R}  ${D}<@name> <prompt>${R}"
+      printf '%b\n\n' "  ${D}    Run a single named agent with a custom prompt${R}"
       printf "%b\n" "$HR"
-      printf "  ${D}PLAN_FILE env var overrides the default plan path${R}\n\n"
+      printf '%b\n\n' "  ${D}PLAN_FILE env var overrides the default plan path${R}"
       ;;
   esac
 }
@@ -633,42 +650,43 @@ cmd_swarm() {
 cmd_help() {
   header "Help"
 
-  printf "  ${B}USAGE${R}\n\n"
-  printf "    ${D}ai-squad${R} ${B}<command>${R} ${D}[arguments]${R}\n"
+  printf '%b\n\n' "  ${B}USAGE${R}"
+  printf '%b\n' "    ${D}ai-squad${R} ${B}<command>${R} ${D}[arguments]${R}"
 
   printf "\n%b\n" "$HR"
-  printf "  ${B}COMMANDS${R}\n\n"
+  printf '%b\n\n' "  ${B}COMMANDS${R}"
 
-  printf "  ${BCYN}init${R}    ${D}[project-name]${R}\n"
-  printf "  ${D}    Scaffold the template into a new or existing directory${R}\n\n"
+  printf '%b\n' "  ${BCYN}init${R}    ${D}[-y|--yes] [project-name]${R}"
+  printf '%b\n' "  ${D}    Scaffold the template into a new or existing directory${R}"
+  printf '%b\n\n' "  ${D}    --yes / -y  skip all interactive prompts (for CI)${R}"
 
-  printf "  ${BCYN}labels${R}  ${D}[owner/repo]${R}\n"
-  printf "  ${D}    Create GitHub issue labels for the squad pipeline${R}\n\n"
+  printf '%b\n' "  ${BCYN}labels${R}  ${D}[owner/repo]${R}"
+  printf '%b\n\n' "  ${D}    Create GitHub issue labels for the squad pipeline${R}"
 
-  printf "  ${BCYN}swarm${R}   ${D}<full | tasks <n...> | agent <@name> <prompt>>${R}\n"
-  printf "  ${D}    Launch agents in parallel tmux panes (Claude Code only)${R}\n"
-  printf "  ${D}    Run: ai-squad swarm help  for details${R}\n\n"
+  printf '%b\n' "  ${BCYN}swarm${R}   ${D}<full | tasks <n...> | agent <@name> <prompt>>${R}"
+  printf '%b\n' "  ${D}    Launch agents in parallel tmux panes (Claude Code only)${R}"
+  printf '%b\n\n' "  ${D}    Run: ai-squad swarm help  for details${R}"
 
   printf "%b\n" "$HR"
-  printf "  ${B}EXAMPLES${R}\n\n"
+  printf '%b\n\n' "  ${B}EXAMPLES${R}"
 
-  printf "  ${D}# New project${R}\n"
-  printf "  ${BCYN}ai-squad${R} ${B}init${R} my-project\n\n"
+  printf '%b\n' "  ${D}# New project${R}"
+  printf '%b\n\n' "  ${BCYN}ai-squad${R} ${B}init${R} my-project"
 
-  printf "  ${D}# Create labels after connecting a remote repo${R}\n"
-  printf "  ${BCYN}ai-squad${R} ${B}labels${R}\n\n"
+  printf '%b\n' "  ${D}# Create labels after connecting a remote repo${R}"
+  printf '%b\n\n' "  ${BCYN}ai-squad${R} ${B}labels${R}"
 
-  printf "  ${D}# Run all plan tasks in parallel${R}\n"
-  printf "  ${BCYN}ai-squad${R} ${B}swarm full${R}\n\n"
+  printf '%b\n' "  ${D}# Run all plan tasks in parallel${R}"
+  printf '%b\n\n' "  ${BCYN}ai-squad${R} ${B}swarm full${R}"
 
-  printf "  ${D}# Run specific tasks${R}\n"
-  printf "  ${BCYN}ai-squad${R} ${B}swarm tasks${R} 1 3 5\n\n"
+  printf '%b\n' "  ${D}# Run specific tasks${R}"
+  printf '%b\n\n' "  ${BCYN}ai-squad${R} ${B}swarm tasks${R} 1 3 5"
 
-  printf "  ${D}# Single agent${R}\n"
-  printf "  ${BCYN}ai-squad${R} ${B}swarm agent${R} @dotnet ${D}\"make OrderTests.cs pass\"${R}\n"
+  printf '%b\n' "  ${D}# Single agent${R}"
+  printf '%b\n' "  ${BCYN}ai-squad${R} ${B}swarm agent${R} @dotnet ${D}\"make OrderTests.cs pass\"${R}"
 
   printf "\n%b\n" "$HR"
-  printf "  ${D}Template:  %s${R}\n\n" "$TEMPLATE_DIR"
+  printf '  %bTemplate:  %s%b\n\n' "${D}" "$TEMPLATE_DIR" "${R}"
 }
 
 # ─── Dispatch ─────────────────────────────────────────────────────────────────
@@ -681,8 +699,8 @@ case "${1:-help}" in
   swarm)              shift; cmd_swarm  "$@" ;;
   help | -h | --help) cmd_help ;;
   *)
-    printf "\n  ${BRED}✗${R}  Unknown command: ${B}%s${R}\n" "$1" >&2
-    printf "  ${D}Run${R} ${B}ai-squad help${R} ${D}for available commands.${R}\n\n" >&2
+    printf "\n  %b✗%b  Unknown command: %b%s%b\n" "${BRED}" "${R}" "${B}" "$1" "${R}" >&2
+    printf '%b\n\n' "  ${D}Run${R} ${B}ai-squad help${R} ${D}for available commands.${R}" >&2
     exit 1
     ;;
 esac
