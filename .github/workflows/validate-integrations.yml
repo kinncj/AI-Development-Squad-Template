@@ -50,10 +50,11 @@ jobs:
           $GITHUB_WORKSPACE/scripts/ai-squad init --yes test-smoke
           cd test-smoke
           claude --version
-          claude -p "list all agents and their capabilities" | grep "orchestrator" || { echo "orchestrator agent not found in claude output"; exit 1; }
-          claude -p "list all agents and their capabilities" | grep "supabase" || { echo "supabase integration not found in claude output"; exit 1; }
+          # Verify agent files exist in the initialized project (no API key required)
+          ls .claude/agents/orchestrator.md || { echo "orchestrator agent missing from initialized project"; exit 1; }
+          ls .claude/agents/architect.md    || { echo "architect agent missing from initialized project"; exit 1; }
+          ls .claude/agents/supabase.md     || { echo "supabase agent missing from initialized project"; exit 1; }
           echo "Agent definitions are available to Claude Code."
-        continue-on-error: true
 
   # ─── OpenCode agent syntax ─────────────────────────────────────────────────
   validate-opencode:
@@ -97,9 +98,13 @@ jobs:
 
       - name: Smoke-test OpenCode CLI
         run: |
-          opencode --version 2>/dev/null || echo "OpenCode not available in this runner."
+          opencode --version
+          cd /tmp
+          $GITHUB_WORKSPACE/scripts/ai-squad init --yes oc-smoke
+          cd oc-smoke
           opencode agent list | grep "orchestrator" || { echo "orchestrator agent not found in opencode"; exit 1; }
-        continue-on-error: true
+          opencode agent list | grep "architect"    || { echo "architect agent not found in opencode"; exit 1; }
+          echo "OpenCode agents are discoverable."
 
   # ─── Model ID audit ────────────────────────────────────────────────────────
   audit-model-ids:
