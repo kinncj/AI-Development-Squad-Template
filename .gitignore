@@ -1,0 +1,27 @@
+# ai-squad tool repo — root .gitignore
+
+# CLI runtime state (jingle flag + last-used options)
+.ai-squad.json
+
+# Node
+node_modules/
+npm-debug.log*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor artefacts
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Test artefacts
+/tmp/
+
+# Claude Code local settings (generated at runtime, not template content)
+.claude/settings.local.json
+var/*

@@ -1,0 +1,48 @@
+# Template project .gitignore
+# This file is copied into every project scaffolded by ai-squad init.
+
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build output
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+
+# Test output
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Docker
+*.log
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Editor artefacts
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# AI Squad CLI state (if ai-squad is installed inside the project)
+.ai-squad.json

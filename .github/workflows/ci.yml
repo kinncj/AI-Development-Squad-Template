@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # ─── Lint shell scripts ────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Lint ai-squad CLI
+        run: shellcheck -x scripts/ai-squad
+
+      - name: Lint test scripts
+        run: find tests -name "*.sh" -exec shellcheck -x {} +
+
+      - name: Lint infra scripts
+        run: find template/infra/scripts -name "*.sh" -exec shellcheck -x {} +
+
+  # ─── CLI tests ─────────────────────────────────────────────────────────────
+  test-cli:
+    name: CLI Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Make CLI executable
+        run: chmod +x scripts/ai-squad
+
+      - name: ai-squad help
+        run: ./scripts/ai-squad help
+
+      - name: ai-squad swarm help
+        run: ./scripts/ai-squad swarm help
+
+      - name: ai-squad init (no labels)
+        run: |
+          mkdir /tmp/test-init
+          cd /tmp/test-init
+          printf "n\n" | $GITHUB_WORKSPACE/scripts/ai-squad init
+
+      - name: Verify init output
+        run: bash tests/cli/test_ai_squad.sh
+
+  # ─── Template validation ───────────────────────────────────────────────────
+  validate-template:
+    name: Validate Template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Structure
+        run: bash tests/template/test_structure.sh
+
+      - name: Agent frontmatter
+        run: bash tests/template/test_agents.sh
+
+      - name: Skills
+        run: bash tests/template/test_skills.sh
+
+      - name: Commands
+        run: bash tests/template/test_commands.sh
+
+  # ─── CI gate ───────────────────────────────────────────────────────────────
+  ci-gate:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    needs: [lint, test-cli, validate-template]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.lint.result }}"              != "success" ||
+                "${{ needs.test-cli.result }}"          != "success" ||
+                "${{ needs.validate-template.result }}" != "success" ]]; then
+            echo "One or more required CI jobs failed."
+            exit 1
+          fi
+          echo "All CI checks passed."

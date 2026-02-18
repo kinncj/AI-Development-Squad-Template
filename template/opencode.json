@@ -1,0 +1,48 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "theme": "catppuccin",
+  "model": {
+    "default": "anthropic/claude-sonnet-4-6"
+  },
+  "agent": {
+    "default": "orchestrator"
+  },
+  "providers": {
+    "copilot": {
+      "enabled": true
+    },
+    "anthropic": {
+      "enabled": true
+    }
+  },
+  "permission": {
+    "edit": "ask",
+    "bash": {
+      "*": "ask",
+      "ls*": "allow",
+      "cat*": "allow",
+      "find*": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "gh *": "allow",
+      "make *": "allow"
+    },
+    "webfetch": "deny"
+  },
+  "mcp": {
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp@latest"],
+      "enabled": true
+    }
+  },
+  "watcher": {
+    "ignore": [
+      "node_modules", ".git", "dist", "build", "coverage",
+      ".next", ".nuxt", "bin", "obj", "target",
+      "__pycache__", ".pytest_cache", ".mypy_cache",
+      ".terraform", "*.tfstate*"
+    ]
+  },
+  "instructions": "Read AGENTS.md for the full agent roster. Read CLAUDE.md for project rules. Always use the orchestrator as the entry point for feature development."
+}

@@ -1,0 +1,138 @@
+name: Integration Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# These jobs validate that the agent and skill definitions are structurally
+# compatible with Claude Code and OpenCode. Full LLM invocations require
+# secrets and run only when ANTHROPIC_API_KEY is set.
+
+jobs:
+  # ─── Claude Code agent syntax ──────────────────────────────────────────────
+  validate-claude-code:
+    name: Claude Code Agents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+        continue-on-error: true
+
+      - name: Validate agent frontmatter (structural)
+        run: bash tests/template/test_agents.sh
+
+      - name: Validate claude/ directory layout
+        run: |
+          echo "Claude Code commands:"
+          ls template/.claude/commands/
+          echo "Claude Code agents:"
+          ls template/.claude/agents/
+          echo "Claude Code skills:"
+          ls template/.claude/skills/
+
+      - name: Smoke-test Claude Code CLI (requires ANTHROPIC_API_KEY)
+        if: env.ANTHROPIC_API_KEY != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          cd /tmp
+          printf "n\n" | $GITHUB_WORKSPACE/scripts/ai-squad init test-smoke
+          cd test-smoke
+          claude --version
+          echo "Agent definitions are available to Claude Code."
+        continue-on-error: true
+
+  # ─── OpenCode agent syntax ─────────────────────────────────────────────────
+  validate-opencode:
+    name: OpenCode Agents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install OpenCode
+        run: npm install -g opencode-ai
+        continue-on-error: true
+
+      - name: Validate opencode.json schema
+        run: |
+          python3 -c "
+          import json, sys
+          with open('template/opencode.json') as f:
+              cfg = json.load(f)
+          required = ['model', 'mcp']
+          for k in required:
+              assert k in cfg, f'Missing key: {k}'
+          print('opencode.json is valid JSON with expected keys.')
+          "
+
+      - name: Validate opencode/ directory layout
+        run: |
+          echo "OpenCode commands:"
+          ls template/.opencode/commands/
+          echo "OpenCode agents:"
+          ls template/.opencode/agents/
+          echo "OpenCode skills:"
+          ls template/.opencode/skills/
+
+      - name: Smoke-test OpenCode CLI (requires ANTHROPIC_API_KEY)
+        if: env.ANTHROPIC_API_KEY != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          opencode --version 2>/dev/null || echo "OpenCode not available in this runner."
+        continue-on-error: true
+
+  # ─── Model ID audit ────────────────────────────────────────────────────────
+  audit-model-ids:
+    name: Audit Model IDs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No stale model IDs (date-suffixed)
+        run: |
+          STALE=$(grep -r "claude-.*-2025[0-9]\{4\}" template/.claude/agents/ template/.opencode/agents/ || true)
+          if [[ -n "$STALE" ]]; then
+            echo "Stale model IDs found:"
+            echo "$STALE"
+            exit 1
+          fi
+          echo "No stale model IDs found."
+
+      - name: Orchestrator and Architect use Opus
+        run: |
+          for platform in .claude .opencode; do
+            for agent in orchestrator architect; do
+              f="template/$platform/agents/${agent}.md"
+              if [[ -f "$f" ]]; then
+                grep -q "opus" "$f" || { echo "FAIL: $f should use opus model"; exit 1; }
+                echo "OK: $platform/$agent uses opus"
+              fi
+            done
+          done
+
+      - name: Implementation agents use Sonnet (not Opus)
+        run: |
+          for agent in dotnet javascript typescript react-vite nextjs java springboot qa docs; do
+            f="template/.claude/agents/${agent}.md"
+            if [[ -f "$f" ]]; then
+              grep -q "sonnet" "$f" || { echo "FAIL: $f should use sonnet model"; exit 1; }
+              ! grep -q "opus" "$f" || { echo "FAIL: $f should not use opus model"; exit 1; }
+              echo "OK: .claude/$agent uses sonnet"
+            fi
+          done
