@@ -40,17 +40,67 @@ fi
 HR="  ${D}$(printf '─%.0s' {1..60})${R}"
 
 # ─── ASCII banner ─────────────────────────────────────────────────────────────
+_BANNER_ROWS=(
+  "                                                                    "
+  "   ▄▄▄▄   ▄▄▄▄▄    ▄▄▄▄▄▄▄   ▄▄▄▄▄   ▄▄▄  ▄▄▄   ▄▄▄▄   ▄▄▄▄▄▄   "
+  "  ▄██▀▀██▄  ███    █████▀▀▀ ▄███████▄ ███  ███ ▄██▀▀██▄ ███▀▀██▄  "
+  "  ███  ███  ███     ▀████▄  ███   ███ ███  ███ ███  ███ ███  ███   "
+  "  ███▀▀███  ███       ▀████ ███▄█▄███ ███▄▄███ ███▀▀███ ███  ███   "
+  "  ███  ███ ▄███▄   ███████▀  ▀█████▀  ▀██████▀ ███  ███ ██████▀   "
+  "                          ▀▀                                        "
+  "                                                                    "
+)
+_BANNER_DONE=''
+
 banner() {
   [[ -z "$HGRN" ]] && return
-  printf "${HGRN}"
-  printf '                                                                    \n'
-  printf '   ▄▄▄▄   ▄▄▄▄▄    ▄▄▄▄▄▄▄   ▄▄▄▄▄   ▄▄▄  ▄▄▄   ▄▄▄▄   ▄▄▄▄▄▄   \n'
-  printf '  ▄██▀▀██▄  ███    █████▀▀▀ ▄███████▄ ███  ███ ▄██▀▀██▄ ███▀▀██▄  \n'
-  printf '  ███  ███  ███     ▀████▄  ███   ███ ███  ███ ███  ███ ███  ███   \n'
-  printf '  ███▀▀███  ███       ▀████ ███▄█▄███ ███▄▄███ ███▀▀███ ███  ███   \n'
-  printf '  ███  ███ ▄███▄   ███████▀  ▀█████▀  ▀██████▀ ███  ███ ██████▀   \n'
-  printf '                          ▀▀                                        \n'
-  printf '                                                                    \n'
+
+  local N=${#_BANNER_ROWS[@]}  # 8 rows total
+
+  # Subsequent calls (e.g. swarm help after init): print statically, no re-animation
+  if [[ -n "$_BANNER_DONE" ]]; then
+    printf "${HGRN}"
+    local _r; for _r in "${_BANNER_ROWS[@]}"; do printf '%s\n' "$_r"; done
+    printf "${R}"
+    return
+  fi
+  _BANNER_DONE=1
+
+  # Reserve vertical space for the animation area
+  local _i; for ((_i=0; _i<N; _i++)); do printf '\n'; done
+
+  # ── Frame 0: edge-on ─────────────────────────────────────────────────────
+  # Single dim line at mid-height simulates the card seen edge-on.
+  printf "\033[${N}A"
+  for ((_i=0; _i<N; _i++)); do
+    if ((_i == 3)); then
+      printf '\033[2K%b\n' \
+        "${D}  ──────────────────────────────────────────────────────────────────${R}"
+    else
+      printf '\033[2K\n'
+    fi
+  done
+  sleep 0.06
+
+  # ── Frames 1-3: expand from center outward ────────────────────────────────
+  # Content rows live at indices 1-6.  Center pair: rows 3-4.
+  # f=2 → show 2 rows (3-4); f=1 → show 4 rows (2-5); f=0 → show 6 rows (1-6).
+  local _f _top _rows
+  for _f in 2 1 0; do
+    _top=$((_f + 1))        # first visible content index
+    _rows=$((6 - 2 * _f))  # rows to reveal: 2, 4, 6
+    printf "\033[${N}A"
+    printf "${HGRN}"
+    for ((_i=0; _i<N; _i++)); do
+      if ((_i >= _top && _i < _top + _rows)); then
+        printf '\033[2K%s\n' "${_BANNER_ROWS[$_i]}"
+      else
+        printf '\033[2K\n'
+      fi
+    done
+    sleep 0.07
+  done
+
   printf "${R}"
 }
 

@@ -1,10 +1,25 @@
-# AI Development Squad Template
+```
+
+   ▄▄▄▄   ▄▄▄▄▄    ▄▄▄▄▄▄▄   ▄▄▄▄▄   ▄▄▄  ▄▄▄   ▄▄▄▄   ▄▄▄▄▄▄
+  ▄██▀▀██▄  ███    █████▀▀▀ ▄███████▄ ███  ███ ▄██▀▀██▄ ███▀▀██▄
+  ███  ███  ███     ▀████▄  ███   ███ ███  ███ ███  ███ ███  ███
+  ███▀▀███  ███       ▀████ ███▄█▄███ ███▄▄███ ███▀▀███ ███  ███
+  ███  ███ ▄███▄   ███████▀  ▀█████▀  ▀██████▀ ███  ███ ██████▀
+                          ▀▀
+
+```
 
 A production-ready template for running an **orchestrated, phase-gated, TDD-enforced** development pipeline with 27 specialist AI agents. Designed to work on two platforms simultaneously: **Claude Code** (Claude Code Max) and **OpenCode** (GitHub Copilot Enterprise).
 
 > **Based on:** [Building an AI Development Squad: Orchestrated Multi-Agent Systems with Claude Code and OpenCode](./ARTICLE.md)
 >
 > The article walks through every design decision behind this system — why specialist agents, how the 8-phase pipeline works, why CLI beats MCP for token efficiency, and how to map your licenses to the right models. Read it before customizing the template.
+
+<div align="center">
+  <img src="./demo.gif" alt="AI Squad demo — ai-squad init scaffolding a project" width="860">
+  <br/>
+  <sub><code>ai-squad init</code> — scaffolding a new project from the CLI</sub>
+</div>
 
 ---
 

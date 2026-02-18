@@ -77,7 +77,10 @@ jobs:
           required = ['model', 'mcp']
           for k in required:
               assert k in cfg, f'Missing key: {k}'
-          print('opencode.json is valid JSON with expected keys.')
+          assert isinstance(cfg['model'], str), 'model must be a string (provider/model)'
+          assert 'providers' not in cfg, 'providers is not a valid key; use disabled_providers/enabled_providers'
+          assert isinstance(cfg.get('instructions', []), list), 'instructions must be an array'
+          print('opencode.json is valid JSON with correct schema.')
           "
 
       - name: Validate opencode/ directory layout
