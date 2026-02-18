@@ -376,15 +376,15 @@ _configure_opencode_models() {
     warn "No provider selected. The squad needs at least one model provider."
     printf '\n'
     printf '%b\n' "  ${BCYN}Free cloud models${R}  ${D}(require an opencode provider connection)${R}"
-    printf "  ${D}[1]${R}  opencode/big-pickle\n"
-    printf "  ${D}[2]${R}  opencode/glm-5-free\n"
-    printf "  ${D}[3]${R}  opencode/gpt-5-nano\n"
-    printf "  ${D}[4]${R}  opencode/kimi-k2.5-free\n"
-    printf "  ${D}[5]${R}  opencode/minimax-m2.5-free\n"
+    printf '%b\n' "  ${D}[1]${R}  opencode/big-pickle"
+    printf '%b\n' "  ${D}[2]${R}  opencode/glm-5-free"
+    printf '%b\n' "  ${D}[3]${R}  opencode/gpt-5-nano"
+    printf '%b\n' "  ${D}[4]${R}  opencode/kimi-k2.5-free"
+    printf '%b\n' "  ${D}[5]${R}  opencode/minimax-m2.5-free"
     printf '%b\n' "  ${BCYN}Local models${R}  ${D}(require Ollama running locally)${R}"
-    printf "  ${D}[6]${R}  ollama/llama3.2:latest\n"
-    printf "  ${D}[7]${R}  Custom Ollama model ID\n"
-    printf "  ${D}[8]${R}  Skip — configure manually later\n"
+    printf '%b\n' "  ${D}[6]${R}  ollama/llama3.2:latest"
+    printf '%b\n' "  ${D}[7]${R}  Custom Ollama model ID"
+    printf '%b\n' "  ${D}[8]${R}  Skip — configure manually later"
     printf '\n'
 
     local BIG_MODEL FAST_MODEL _pick
@@ -444,8 +444,8 @@ _configure_opencode_models() {
       printf '\n'
       if [[ "$BIG_MODEL" == opencode/* || "$FAST_MODEL" == opencode/* ]]; then
         printf '%b\n' "  ${BCYN}opencode/* models${R} — add the opencode provider:"
-        printf "  ${D}  opencode → Settings → Providers → opencode${R}\n"
-        printf "  ${D}  Get your API key at https://opencode.ai${R}\n"
+        printf '%b\n' "  ${D}  opencode → Settings → Providers → opencode${R}"
+        printf '%b\n' "  ${D}  Get your API key at https://opencode.ai${R}"
         printf '\n'
       fi
       if [[ "$BIG_MODEL" == ollama/* || "$FAST_MODEL" == ollama/* ]]; then
@@ -453,9 +453,9 @@ _configure_opencode_models() {
         _ollama_model=$(printf '%s\n%s\n' "$BIG_MODEL" "$FAST_MODEL" \
           | grep '^ollama/' | sed 's|ollama/||' | head -1)
         printf '%b\n' "  ${BCYN}ollama/* models${R} — start Ollama and pull the model:"
-        printf "  ${D}  brew install ollama && ollama serve${R}\n"
-        printf "  ${D}  ollama pull %s${R}\n" "$_ollama_model"
-        printf "  ${D}  opencode → Settings → Providers → Ollama (http://localhost:11434)${R}\n"
+        printf '%b\n' "  ${D}  brew install ollama && ollama serve${R}"
+        printf '%b  ollama pull %s%b\n' "$D" "$_ollama_model" "$R"
+        printf '%b\n' "  ${D}  opencode → Settings → Providers → Ollama (http://localhost:11434)${R}"
         printf '\n'
       fi
       printf '%b\n' "$HR"
