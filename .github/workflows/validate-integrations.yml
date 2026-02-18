@@ -91,7 +91,7 @@ jobs:
           echo "OpenCode commands:"
           ls template/.opencode/commands/
           echo "OpenCode agents:"
-          ls template/.opencode/agent/
+          ls template/.opencode/agents/
           echo "OpenCode skills:"
           ls template/.opencode/skills/
 
@@ -110,7 +110,7 @@ jobs:
 
       - name: No stale model IDs (date-suffixed)
         run: |
-          STALE=$(grep -r "claude-.*-2025[0-9]\{4\}" template/.claude/agents/ template/.opencode/agent/ || true)
+          STALE=$(grep -r "claude-.*-2025[0-9]\{4\}" template/.claude/agents/ template/.opencode/agents/ || true)
           if [[ -n "$STALE" ]]; then
             echo "Stale model IDs found:"
             echo "$STALE"
