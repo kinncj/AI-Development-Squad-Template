@@ -33,7 +33,7 @@ Key characteristics: richer frontmatter with `model`, `temperature`, `mode`, `to
 | Capability | Claude Code Max | OpenCode (GitHub Copilot Enterprise) |
 |---|---|---|
 | Orchestrator / Architect | `claude-opus-4-6` | `anthropic/claude-opus-4-6` |
-| Implementation agents | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
+| Implementation agents | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.5` |
 | Infrastructure agents | `claude-sonnet-4-6` | `copilot/gpt-4.1` |
 | Small/fast model | `claude-haiku-4-5-20251001` | `copilot/gpt-5-nano` |
 
@@ -191,10 +191,10 @@ stateDiagram-v2
 | Agent Category | Model | Reasoning |
 |---|---|---|
 | Orchestrator, Architect | `anthropic/claude-opus-4-6` (Claude Code: `claude-opus-4-6`) | Highest reasoning for coordination + design |
-| Product Owner, QA, Docs | `copilot/claude-sonnet-4-6` | Creative + structured output |
-| Backend/Frontend specialists | `copilot/claude-sonnet-4-6` | Fast, high-quality code gen |
+| Product Owner, QA, Docs | `github-copilot/claude-sonnet-4.5` | Creative + structured output |
+| Backend/Frontend specialists | `github-copilot/claude-sonnet-4.5` | Fast, high-quality code gen |
 | Infrastructure specialists | `copilot/gpt-4.1` | Strong at config/manifest generation |
-| ML/AI specialists | `copilot/claude-sonnet-4-6` | Good at Python/ML patterns |
+| ML/AI specialists | `github-copilot/claude-sonnet-4.5` | Good at Python/ML patterns |
 
 ---
 
@@ -220,7 +220,7 @@ Owns the 8-phase workflow, TDD loop, quality gates, escalation rules (3 failures
 | Platform | File | Model | Temperature |
 |---|---|---|---|
 | Claude Code | `.claude/agents/product-owner.md` | `claude-sonnet-4-6` | — |
-| OpenCode | `.opencode/agents/product-owner.md` | `copilot/claude-sonnet-4-6` | `0.3` |
+| OpenCode | `.opencode/agents/product-owner.md` | `github-copilot/claude-sonnet-4.5` | `0.3` |
 
 **OpenCode tools:** `write: true`, `edit: true`, `bash: false`. Edit: `docs/**` only. Bash allow (read-only): `cat`, `ls`, `gh issue create`, `gh issue list`, `gh issue view`.
 
@@ -250,7 +250,7 @@ Produces: `architecture.md` (10 required sections + 4 Mermaid diagrams minimum),
 | Platform | File | Model | Temperature |
 |---|---|---|---|
 | Claude Code | `.claude/agents/qa.md` | `claude-sonnet-4-6` | — |
-| OpenCode | `.opencode/agents/qa.md` | `copilot/claude-sonnet-4-6` | `0.05` |
+| OpenCode | `.opencode/agents/qa.md` | `github-copilot/claude-sonnet-4.5` | `0.05` |
 
 **OpenCode tools:** `write: true`, `edit: true`, `bash: true`. Edit: `tests/**`, `**/*.test.*`, `**/*.spec.*`, `playwright.config.*`, `docker-compose*.yml`, `scripts/seed*`, `Makefile`. Bash: all allowed (needs to run tests and update issues).
 
@@ -276,7 +276,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/dotnet.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/dotnet.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/dotnet.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** .NET 8+, ASP.NET Core, Entity Framework Core, Clean Architecture (Api → Application → Domain → Infrastructure), MediatR, FluentValidation, Result pattern, xUnit + FluentAssertions + TestContainers.
 
@@ -291,7 +291,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/javascript.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/javascript.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/javascript.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** Node.js 22+, Express/Hono/Fastify, Vitest, ESM modules, no TypeScript. For vanilla JS APIs, serverless functions, scripts, and tooling.
 
@@ -306,7 +306,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/typescript.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/typescript.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/typescript.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** TypeScript 5.x strict mode, Zod for validation, Drizzle/Prisma for ORM, Vitest, `bun` or `npm`. No `any` types. Strict `tsconfig.json`.
 
@@ -321,7 +321,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/react-vite.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/react-vite.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/react-vite.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** React 19+, Vite 6+, TypeScript strict, Tailwind CSS, shadcn/ui + Magic UI, Zod + React Hook Form, Tanstack Router + Query, Zustand for state management. Vitest + Testing Library + axe-core.
 
@@ -336,7 +336,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/nextjs.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/nextjs.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/nextjs.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** Next.js 15+ App Router, Server Components by default, `use client` only when needed, Server Actions for mutations, Tailwind CSS, shadcn/ui, Zod + React Hook Form, Tanstack Query, Playwright for E2E.
 
@@ -351,7 +351,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/java.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/java.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/java.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** Java 21+, virtual threads, records, sealed classes, pattern matching. JUnit 5 + AssertJ + Testcontainers. Maven or Gradle.
 
@@ -366,7 +366,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/springboot.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/springboot.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/springboot.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** Spring Boot 3.x, Java 21+, Hexagonal Architecture, Spring Data JPA, Flyway/Liquibase, Spring Security, Spring Cloud, JUnit 5 + Mockito + Testcontainers.
 
@@ -426,7 +426,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/postgresql.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/postgresql.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/postgresql.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** PostgreSQL 16+, DDL migrations (Flyway/EF Core/Prisma/Drizzle), indexing strategy, `EXPLAIN ANALYZE`, partitioning, Row-Level Security, connection pooling (PgBouncer), backup/restore patterns.
 
@@ -441,7 +441,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/redis.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/redis.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/redis.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** Redis 7+, Redis Stack (JSON, Search, TimeSeries), Streams, Lua scripting, Sentinel/Cluster, eviction policies, key design patterns, TTL strategies.
 
@@ -456,7 +456,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/supabase.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/supabase.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/supabase.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** Supabase Auth (email, OAuth, MFA), Row-Level Security on all tables, Edge Functions (Deno runtime), Realtime subscriptions, Storage buckets, database migrations in `supabase/migrations/`, local dev with `supabase start`.
 
@@ -471,7 +471,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/vercel.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/vercel.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/vercel.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** `vercel.json` config, Edge/Serverless/ISR runtime selection, environment variables, preview deployments, Vercel KV/Blob/Postgres, cron jobs, middleware, headers/redirects, framework auto-detection.
 
@@ -486,7 +486,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/stripe.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/stripe.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/stripe.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** Stripe API (latest), webhook signature verification on ALL endpoints, idempotency keys, restricted API keys per service, Checkout Sessions, Payment Intents, Subscriptions, Customer Portal, Stripe CLI for local testing (`stripe listen --forward-to`).
 
@@ -501,7 +501,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/data-science.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/data-science.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/data-science.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** Python 3.12+, pandas, NumPy, scikit-learn, matplotlib/seaborn/plotly, statsmodels, SciPy. Focus on EDA, feature engineering, statistical testing, visualization best practices.
 
@@ -516,7 +516,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/data-engineer.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/data-engineer.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/data-engineer.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** Python, SQL, dbt, Apache Airflow/Dagster, Spark (PySpark), data lake patterns (Delta Lake/Iceberg), schema evolution, data quality (Great Expectations), dimensional modeling.
 
@@ -531,7 +531,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/tensorflow.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/tensorflow.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/tensorflow.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** TensorFlow 2.x, Keras 3, `tf.data` pipelines, mixed precision training, TensorBoard, SavedModel export, TFLite conversion, TF Serving. GPU memory management, distributed training with `tf.distribute`.
 
@@ -546,7 +546,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/pytorch.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/pytorch.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/pytorch.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** PyTorch 2.x, `torch.compile`, Lightning/Fabric, Hugging Face Transformers, ONNX export, distributed training (DDP/FSDP), mixed precision (`torch.amp`), custom datasets and dataloaders.
 
@@ -561,7 +561,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/pandas-numpy.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/pandas-numpy.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/pandas-numpy.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** pandas 2.x (Arrow backend), NumPy 2.x, vectorized operations over loops, method chaining, `pd.eval`/`query`, memory-efficient dtypes, chunked processing for large datasets.
 
@@ -576,7 +576,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/scikit.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/scikit.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/scikit.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** scikit-learn 1.x, Pipeline + ColumnTransformer, cross-validation, hyperparameter tuning (GridSearchCV/Optuna), model persistence (joblib), feature selection, metrics/evaluation, SHAP for interpretability.
 
@@ -591,7 +591,7 @@ graph LR
 | Platform | File | Model |
 |---|---|---|
 | Claude Code | `.claude/agents/jupyter.md` | `claude-sonnet-4-6` |
-| OpenCode | `.opencode/agents/jupyter.md` | `copilot/claude-sonnet-4-6` |
+| OpenCode | `.opencode/agents/jupyter.md` | `github-copilot/claude-sonnet-4.5` |
 
 **Stack:** JupyterLab/Notebook, `nbformat` for programmatic creation, `papermill` for parameterized execution, `nbconvert` for export (HTML/PDF), cell organization patterns (setup → data → analysis → visualization → conclusions), clean notebook hygiene (restart & run all).
 
@@ -606,7 +606,7 @@ graph LR
 | Platform | File | Model | Temperature |
 |---|---|---|---|
 | Claude Code | `.claude/agents/docs.md` | `claude-sonnet-4-6` | — |
-| OpenCode | `.opencode/agents/docs.md` | `copilot/claude-sonnet-4-6` | `0.2` |
+| OpenCode | `.opencode/agents/docs.md` | `github-copilot/claude-sonnet-4.5` | `0.2` |
 
 **OpenCode tools:** `write: true`, `edit: true`, `bash: false`. Edit: `docs/**`, `README.md`, `CHANGELOG.md`, `**/*.md`. Bash allow (read-only): `cat`, `ls`, `find`, `git log`, `git diff`, `gh issue comment`.
 

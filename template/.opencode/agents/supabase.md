@@ -1,7 +1,7 @@
 ---
 description: Implements Supabase-backed applications including Auth, RLS, Edge Functions, and Realtime.
 mode: subagent
-model: copilot/claude-sonnet-4-6
+model: github-copilot/claude-sonnet-4.6
 temperature: 0.2
 tools:
   write: true

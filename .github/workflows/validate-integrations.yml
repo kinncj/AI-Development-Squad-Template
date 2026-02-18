@@ -50,6 +50,8 @@ jobs:
           $GITHUB_WORKSPACE/scripts/ai-squad init --yes test-smoke
           cd test-smoke
           claude --version
+          claude -p "list all agents and their capabilities" | grep "orchestrator" || { echo "orchestrator agent not found in claude output"; exit 1; }
+          claude -p "list all agents and their capabilities" | grep "supabase" || { echo "supabase integration not found in claude output"; exit 1; }
           echo "Agent definitions are available to Claude Code."
         continue-on-error: true
 
@@ -96,6 +98,7 @@ jobs:
       - name: Smoke-test OpenCode CLI
         run: |
           opencode --version 2>/dev/null || echo "OpenCode not available in this runner."
+          opencode agent list | grep "orchestrator" || { echo "orchestrator agent not found in opencode"; exit 1; }
         continue-on-error: true
 
   # ─── Model ID audit ────────────────────────────────────────────────────────

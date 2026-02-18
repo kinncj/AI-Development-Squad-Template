@@ -1,7 +1,7 @@
 ---
 description: Payment integration, webhooks, billing flows, and Stripe API implementation.
 mode: subagent
-model: copilot/claude-sonnet-4-6
+model: github-copilot/claude-sonnet-4.6
 temperature: 0.1
 tools:
   write: true

@@ -299,6 +299,172 @@ PYEOF
   } >/dev/null 2>&1 &
 }
 
+# ─── OpenCode model configuration ─────────────────────────────────────────────
+_oc_replace_in_file() {
+  # _oc_replace_in_file <file> <from> <to>
+  command -v python3 &>/dev/null || return 0
+  [[ -f "$1" ]] || return 0
+  python3 - "$1" "$2" "$3" <<'PYEOF'
+import sys
+path, old, new = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(path) as f:
+    content = f.read()
+if old in content:
+    with open(path, 'w') as f:
+        f.write(content.replace(old, new))
+PYEOF
+}
+
+_oc_replace_all() {
+  # _oc_replace_all <agents-dir> <opencode-json> <from> <to>
+  local dir="$1" json="$2" from="$3" to="$4"
+  for f in "$dir"/*.md; do
+    [[ -f "$f" ]] && _oc_replace_in_file "$f" "$from" "$to"
+  done
+  [[ -f "$json" ]] && _oc_replace_in_file "$json" "$from" "$to"
+}
+
+_configure_opencode_models() {
+  local TARGET="$1"
+  local AGENTS_DIR="$TARGET/.opencode/agents"
+  local OC_JSON="$TARGET/opencode.json"
+
+  [[ -d "$AGENTS_DIR" ]] || return 0
+
+  step "Configuring OpenCode model providers"
+
+  local HAS_ANTHROPIC='' HAS_COPILOT=''
+
+  printf '%b' "  ${CYN}?${R}  Do you have a ${B}Claude Code${R} (Anthropic API) account? [y/N] "
+  read -r _ans
+  [[ "$_ans" =~ ^[Yy]$ ]] && HAS_ANTHROPIC=1
+
+  printf '%b' "  ${CYN}?${R}  Do you have a ${B}GitHub Copilot${R} account? [y/N] "
+  read -r _ans
+  [[ "$_ans" =~ ^[Yy]$ ]] && HAS_COPILOT=1
+
+  local _provider
+
+  if [[ -n "$HAS_ANTHROPIC" && -n "$HAS_COPILOT" ]]; then
+    # Both: keep template defaults (anthropic/* for orchestration, copilot/* for impl)
+    ok "Both providers" "anthropic/* orchestration · github-copilot/* implementation"
+    _provider="both"
+
+  elif [[ -n "$HAS_ANTHROPIC" ]]; then
+    # Anthropic API only — route everything through anthropic/
+    _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+      "github-copilot/claude-sonnet-4.6" "anthropic/claude-sonnet-4-6"
+    _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+      "github-copilot/claude-opus-4.6"   "anthropic/claude-opus-4-6"
+    _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+      "copilot/gpt-4.1"                  "anthropic/claude-sonnet-4-6"
+    ok "Anthropic only" "anthropic/claude-opus-4-6 · anthropic/claude-sonnet-4-6"
+    _provider="anthropic"
+
+  elif [[ -n "$HAS_COPILOT" ]]; then
+    # GitHub Copilot only — route everything through github-copilot/
+    _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+      "anthropic/claude-opus-4-6"   "github-copilot/claude-opus-4.6"
+    _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+      "anthropic/claude-sonnet-4-6" "github-copilot/claude-sonnet-4.6"
+    ok "GitHub Copilot only" "github-copilot/claude-opus-4.6 · github-copilot/claude-sonnet-4.6"
+    _provider="copilot"
+
+  else
+    # No commercial subscription — offer free/local alternatives
+    printf '\n'
+    warn "No provider selected. The squad needs at least one model provider."
+    printf '\n'
+    printf '%b\n' "  ${BCYN}Free cloud models${R}  ${D}(require an opencode provider connection)${R}"
+    printf "  ${D}[1]${R}  opencode/big-pickle\n"
+    printf "  ${D}[2]${R}  opencode/glm-5-free\n"
+    printf "  ${D}[3]${R}  opencode/gpt-5-nano\n"
+    printf "  ${D}[4]${R}  opencode/kimi-k2.5-free\n"
+    printf "  ${D}[5]${R}  opencode/minimax-m2.5-free\n"
+    printf '%b\n' "  ${BCYN}Local models${R}  ${D}(require Ollama running locally)${R}"
+    printf "  ${D}[6]${R}  ollama/llama3.2:latest\n"
+    printf "  ${D}[7]${R}  Custom Ollama model ID\n"
+    printf "  ${D}[8]${R}  Skip — configure manually later\n"
+    printf '\n'
+
+    local BIG_MODEL FAST_MODEL _pick
+
+    printf '%b' "  ${CYN}?${R}  ${B}Big model${R}  ${D}(orchestrator, architect — heavy reasoning)${R} [1-8]: "
+    read -r _pick
+    case "$_pick" in
+      1) BIG_MODEL="opencode/big-pickle" ;;
+      2) BIG_MODEL="opencode/glm-5-free" ;;
+      3) BIG_MODEL="opencode/gpt-5-nano" ;;
+      4) BIG_MODEL="opencode/kimi-k2.5-free" ;;
+      5) BIG_MODEL="opencode/minimax-m2.5-free" ;;
+      6) BIG_MODEL="ollama/llama3.2:latest" ;;
+      7)
+        printf '%b' "  ${CYN}?${R}  Custom Ollama model (e.g. ollama/mistral:latest): "
+        read -r BIG_MODEL
+        ;;
+      *) BIG_MODEL="" ;;
+    esac
+
+    printf '%b' "  ${CYN}?${R}  ${B}Fast model${R}  ${D}(all implementation agents)${R} [1-8]: "
+    read -r _pick
+    case "$_pick" in
+      1) FAST_MODEL="opencode/big-pickle" ;;
+      2) FAST_MODEL="opencode/glm-5-free" ;;
+      3) FAST_MODEL="opencode/gpt-5-nano" ;;
+      4) FAST_MODEL="opencode/kimi-k2.5-free" ;;
+      5) FAST_MODEL="opencode/minimax-m2.5-free" ;;
+      6) FAST_MODEL="ollama/llama3.2:latest" ;;
+      7)
+        printf '%b' "  ${CYN}?${R}  Custom Ollama model (e.g. ollama/mistral:latest): "
+        read -r FAST_MODEL
+        ;;
+      *) FAST_MODEL="" ;;
+    esac
+
+    if [[ -z "$BIG_MODEL" || -z "$FAST_MODEL" ]]; then
+      warn "Skipping model configuration — edit .opencode/agents/*.md manually."
+      _provider="manual"
+    else
+      _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+        "anthropic/claude-opus-4-6"        "$BIG_MODEL"
+      _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+        "github-copilot/claude-opus-4.6"   "$BIG_MODEL"
+      _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+        "anthropic/claude-sonnet-4-6"      "$FAST_MODEL"
+      _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+        "github-copilot/claude-sonnet-4.6" "$FAST_MODEL"
+      _oc_replace_all "$AGENTS_DIR" "$OC_JSON" \
+        "copilot/gpt-4.1"                  "$FAST_MODEL"
+      ok "Models configured" "${BIG_MODEL} · ${FAST_MODEL}"
+      _provider="free"
+
+      # Provider connection instructions
+      printf '\n%b\n' "$HR"
+      printf '%b\n' "  ${BYEL}!${R}  ${B}Action required: connect providers in OpenCode${R}"
+      printf '\n'
+      if [[ "$BIG_MODEL" == opencode/* || "$FAST_MODEL" == opencode/* ]]; then
+        printf '%b\n' "  ${BCYN}opencode/* models${R} — add the opencode provider:"
+        printf "  ${D}  opencode → Settings → Providers → opencode${R}\n"
+        printf "  ${D}  Get your API key at https://opencode.ai${R}\n"
+        printf '\n'
+      fi
+      if [[ "$BIG_MODEL" == ollama/* || "$FAST_MODEL" == ollama/* ]]; then
+        local _ollama_model
+        _ollama_model=$(printf '%s\n%s\n' "$BIG_MODEL" "$FAST_MODEL" \
+          | grep '^ollama/' | sed 's|ollama/||' | head -1)
+        printf '%b\n' "  ${BCYN}ollama/* models${R} — start Ollama and pull the model:"
+        printf "  ${D}  brew install ollama && ollama serve${R}\n"
+        printf "  ${D}  ollama pull %s${R}\n" "$_ollama_model"
+        printf "  ${D}  opencode → Settings → Providers → Ollama (http://localhost:11434)${R}\n"
+        printf '\n'
+      fi
+      printf '%b\n' "$HR"
+    fi
+  fi
+
+  _config_set "init.opencode_provider" "${_provider:-unknown}"
+}
+
 # ─── init ─────────────────────────────────────────────────────────────────────
 cmd_init() {
   local TARGET_DIR ASSUME_YES=''
@@ -365,6 +531,11 @@ DEPS
   local FILE_COUNT
   FILE_COUNT=$(find "$TARGET_DIR" -type f | wc -l | tr -d ' ')
   ok "Files copied" "$FILE_COUNT files"
+
+  printf "\n%b\n" "$HR"
+  if [[ -z "$ASSUME_YES" ]]; then
+    _configure_opencode_models "$TARGET_DIR"
+  fi
 
   step "Initializing git repository"
   cd "$TARGET_DIR"

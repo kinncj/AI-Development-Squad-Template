@@ -1,7 +1,7 @@
 ---
 description: Creates and manages Jupyter notebooks for analysis, experimentation, and reporting.
 mode: subagent
-model: copilot/claude-sonnet-4-6
+model: github-copilot/claude-sonnet-4.6
 temperature: 0.3
 tools:
   write: true

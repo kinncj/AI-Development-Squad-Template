@@ -107,36 +107,36 @@ ai-squad labels
 | # | Agent | Role | Claude Code model | OpenCode model |
 |---|---|---|---|---|
 | 1 | `orchestrator` | Pipeline control — never writes code | `claude-opus-4-6` | `anthropic/claude-opus-4-6` |
-| 2 | `product-owner` | User stories, acceptance criteria | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
+| 2 | `product-owner` | User stories, acceptance criteria | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
 | 3 | `architect` | ADR, contracts, threat models | `claude-opus-4-6` | `anthropic/claude-opus-4-6` |
-| 4 | `qa` | Write failing tests (RED) + validate (GREEN) | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 5 | `dotnet` | .NET backend | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 6 | `javascript` | Node.js / vanilla JS | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 7 | `typescript` | TypeScript backend/libraries | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 8 | `react-vite` | React + Vite SPA | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 9 | `nextjs` | Next.js full-stack | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 10 | `java` | Java backend (non-Spring) | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 11 | `springboot` | Spring Boot | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
+| 4 | `qa` | Write failing tests (RED) + validate (GREEN) | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 5 | `dotnet` | .NET backend | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 6 | `javascript` | Node.js / vanilla JS | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 7 | `typescript` | TypeScript backend/libraries | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 8 | `react-vite` | React + Vite SPA | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 9 | `nextjs` | Next.js full-stack | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 10 | `java` | Java backend (non-Spring) | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 11 | `springboot` | Spring Boot | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
 | 12 | `kubernetes` | K8s manifests, Kustomize, Helm | `claude-sonnet-4-6` | `copilot/gpt-4.1` |
 | 13 | `terraform` | Terraform IaC | `claude-sonnet-4-6` | `copilot/gpt-4.1` |
 | 14 | `docker` | Dockerfiles, Compose | `claude-sonnet-4-6` | `copilot/gpt-4.1` |
-| 15 | `postgresql` | Schema, migrations, RLS | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 16 | `redis` | Caching, pub/sub, streams | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 17 | `supabase` | Auth, RLS, Edge Functions | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 18 | `vercel` | Deployment, edge config | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 19 | `stripe` | Payments, webhooks, billing | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 20 | `data-science` | EDA, stats, visualization | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 21 | `data-engineer` | Pipelines, ETL, orchestration | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 22 | `tensorflow` | TF/Keras models | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 23 | `pytorch` | PyTorch models | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 24 | `pandas-numpy` | Data manipulation, arrays | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 25 | `scikit` | Classical ML, pipelines | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 26 | `jupyter` | Notebooks, papermill | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
-| 27 | `docs` | Feature docs, CHANGELOG, Mermaid | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
+| 15 | `postgresql` | Schema, migrations, RLS | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 16 | `redis` | Caching, pub/sub, streams | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 17 | `supabase` | Auth, RLS, Edge Functions | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 18 | `vercel` | Deployment, edge config | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 19 | `stripe` | Payments, webhooks, billing | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 20 | `data-science` | EDA, stats, visualization | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 21 | `data-engineer` | Pipelines, ETL, orchestration | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 22 | `tensorflow` | TF/Keras models | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 23 | `pytorch` | PyTorch models | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 24 | `pandas-numpy` | Data manipulation, arrays | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 25 | `scikit` | Classical ML, pipelines | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 26 | `jupyter` | Notebooks, papermill | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
+| 27 | `docs` | Feature docs, CHANGELOG, Mermaid | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.6` |
 
 **Model routing rationale:**
 - Orchestrator and Architect use `anthropic/claude-opus-4-6` directly (Anthropic API) — highest reasoning, needed for coordination and design
-- All implementation agents use `copilot/claude-sonnet-4-6` — fast, high-quality code generation via your GitHub Copilot Enterprise license
+- All implementation agents use `github-copilot/claude-sonnet-4.5` — fast, high-quality code generation via your GitHub Copilot Enterprise license
 - Infrastructure agents (Kubernetes, Terraform, Docker) use `copilot/gpt-4.1` — strong at manifest and config generation
 - Claude Code routes natively via subscription, no provider prefix needed
 

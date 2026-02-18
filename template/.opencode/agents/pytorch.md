@@ -1,7 +1,7 @@
 ---
 description: PyTorch ML model implementation, training loops, and model export.
 mode: subagent
-model: copilot/claude-sonnet-4-6
+model: github-copilot/claude-sonnet-4.6
 temperature: 0.2
 tools:
   write: true

@@ -103,7 +103,7 @@ Hard rules:
 ---
 description: One-line description.
 mode: subagent
-model: copilot/claude-sonnet-4-6
+model: github-copilot/claude-sonnet-4.5
 temperature: 0.2
 tools:
   write: true
@@ -140,7 +140,7 @@ The test in `tests/template/test_agents.sh` validates frontmatter automatically 
 | Role | Claude Code | OpenCode |
 |---|---|---|
 | Orchestrator, Architect | `claude-opus-4-6` | `anthropic/claude-opus-4-6` |
-| All implementation agents | `claude-sonnet-4-6` | `copilot/claude-sonnet-4-6` |
+| All implementation agents | `claude-sonnet-4-6` | `github-copilot/claude-sonnet-4.5` |
 | Kubernetes, Terraform, Docker | `claude-sonnet-4-6` | `copilot/gpt-4.1` |
 
 Never use date-suffixed model IDs (e.g., `claude-sonnet-4-20250514`). The CI model audit will catch these.
