@@ -49,6 +49,14 @@ Create plan.md and test-plan.md yourself (no code — just task decomposition).
 Rule: Every implementation task must have a corresponding test task that precedes it.
 Artifacts: docs/specs/{feature-slug}/plan.md, docs/specs/{feature-slug}/test-plan.md
 
+**REQUIRED task format** — the swarm dashboard parses this pattern exactly. Every task line MUST be:
+```
+- [ ] Task 1: @agent-name Brief description of what this agent must do
+- [ ] Task 2: @qa Write failing tests for X
+- [ ] Task 3: @typescript Implement X to make tests pass
+```
+One line per task. `@agent-name` is the specialist agent. The description after the agent tag is the prompt sent verbatim to that agent. Do NOT use section headers or tables for the task list — only the checklist format above.
+
 ### Phase 4: INFRA
 Delegate to @docker, @kubernetes, @terraform, @postgresql, @redis as needed.
 Gate: All containers healthy (docker compose up -d --wait exits 0).

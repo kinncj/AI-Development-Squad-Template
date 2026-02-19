@@ -105,6 +105,28 @@ else
   printf '\n  Launching swarm agents...\n\n'
   TAB_INDEX=2   # Tab 1 = orchestrator/dashboard; agents start at Tab 2
 
+  # Parse tasks: primary format `- [ ] Task N: @agent desc`;
+  # fallback: `### TASK-NNN — Title` + `**Agent:** \`agent\`` sections.
+  _parse_plan_tasks() {
+    local _pf="$1"
+    if grep -qE '^\- \[ \] Task [0-9]+:' "$_pf" 2>/dev/null; then
+      grep -E '^\- \[ \] Task [0-9]+:' "$_pf"
+      return
+    fi
+    local _title="" _agent="" _tnum=0
+    while IFS= read -r _pl; do
+      if printf '%s' "$_pl" | grep -qE '^### TASK-[0-9]'; then
+        _tnum=$((_tnum + 1))
+        _title=$(printf '%s' "$_pl" | sed 's/^### TASK-[0-9][0-9]* \(— \)*//')
+        _agent=""
+      elif [[ -n "$_title" ]] && printf '%s' "$_pl" | grep -qE '^\*\*Agent:\*\*'; then
+        _agent=$(printf '%s' "$_pl" | tr '`' '\n' | sed -n '2p')
+        printf '- [ ] Task %d: @%s %s\n' "$_tnum" "$_agent" "$_title"
+        _title=""
+      fi
+    done < "$_pf" || true
+  }
+
   while IFS= read -r task_line; do
     _agent=$(printf '%s' "$task_line" | grep -oE '@[a-zA-Z0-9_-]+' | head -1)
     _desc=$(printf '%s' "$task_line" | sed "s/.*${_agent}//" | sed 's/^[[:space:]]*//')
@@ -139,7 +161,7 @@ else
 
     printf '  Tab %-3s  %b@%s%b  %s\n' "$TAB_INDEX" "$CYN" "$_agent_name" "$R" "$_desc"
     TAB_INDEX=$((TAB_INDEX + 1))
-  done < <(grep -E '^\- \[ \] Task [0-9]+:' "$PLAN_FILE" 2>/dev/null)
+  done < <(_parse_plan_tasks "$PLAN_FILE")
 
   TOTAL="${#AGENT_NAMES[@]}"
   if [[ "$TOTAL" -eq 0 ]]; then
