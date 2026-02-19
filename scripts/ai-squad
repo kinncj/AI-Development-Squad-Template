@@ -799,7 +799,7 @@ layout {
         pane command="claude" {
             args "--agent" "orchestrator" "${_ctx_esc}"
         }
-        pane size=14 command="bash" {
+        pane size=16 command="bash" {
             args "${_dash_esc}" "${_sess_esc}" "${_sw_esc}" "${_d_esc}"
         }
     }
@@ -1082,7 +1082,7 @@ layout {
         pane command="claude" {
             args "--agent" "orchestrator" "${_f_esc}"
         }
-        pane size=14 command="bash" {
+        pane size=16 command="bash" {
             args "${_dash_esc}" "${_sess_esc}" "${_sw_esc}" "${_d_esc}" "${_feat_esc}"
         }
     }

@@ -81,27 +81,47 @@ else
   SENTINEL="$SWARM_DIR/sentinel"
   printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$SENTINEL"
   PLAN_FILE=""
+  _WAIT_START=$(date +%s)
 
-  printf '\n  %bAI Squad  —  %s%b\n' "$BOLD" "$SESSION" "$R"
-  [[ -n "$FEATURE_DESC" ]] && printf '  %b%s%b\n' "$DIM" "$FEATURE_DESC" "$R"
-  printf '\n  Watching for plan.md (from orchestrator)...\n'
-
-  # Phase A: wait for plan.md newer than sentinel
+  # Phase A: live-updating panel while orchestrator runs phases 1-3
   while [[ -z "$PLAN_FILE" ]]; do
     PLAN_FILE=$(find "$PROJECT_DIR/docs/specs" -name "plan.md" \
                      -newer "$SENTINEL" 2>/dev/null | head -1 || true)
     [[ -n "$PLAN_FILE" ]] && break
+
+    _now=$(date +%s)
+    _wsecs=$((_now - _WAIT_START))
+    _welapsed=$(printf '%02d:%02d' $((_wsecs / 60)) $((_wsecs % 60)))
+
+    printf '%b' "$CLR"
+    printf '\n  %bAI Squad  —  %s%b\n' "$BOLD" "$SESSION" "$R"
+    [[ -n "$FEATURE_DESC" ]] && printf '  %b%s%b\n' "$DIM" "$FEATURE_DESC" "$R"
+    printf '\n'
+    printf '  %b◑%b Orchestrator  DISCOVER → ARCHITECT → PLAN\n' "$YEL" "$R"
+    printf '  %b○%b Swarm agents  awaiting plan.md\n' "$DIM" "$R"
+    printf '\n'
+    printf '  %bWatching:%b docs/specs/<feature-slug>/plan.md\n' "$DIM" "$R"
+    printf '  %bSession: %b %s\n' "$DIM" "$R" "$SESSION"
+    printf '\n'
+    printf '  Elapsed: %b%s%b\n' "$YEL" "$_welapsed" "$R"
+    printf '\n'
+    printf '  %bAlt-1%b=dashboard  %bCtrl-o d%b=detach\n' "$DIM" "$R" "$DIM" "$R"
+
     sleep 3
-    printf '.'
   done
   rm -f "$SENTINEL"
 
-  printf '\n\n  Plan: %b%s%b\n' "$GRN" "$PLAN_FILE" "$R"
-  printf '  Press Enter to launch agents now, or wait 10s for auto-launch.\n'
+  printf '%b' "$CLR"
+  printf '\n  %bAI Squad  —  %s%b\n' "$BOLD" "$SESSION" "$R"
+  [[ -n "$FEATURE_DESC" ]] && printf '  %b%s%b\n' "$DIM" "$FEATURE_DESC" "$R"
+  printf '\n  %b✓ Plan ready:%b %s\n' "$GRN" "$R" "$PLAN_FILE"
+  printf '\n  Press Enter to launch agents now, or wait 10s for auto-launch.\n'
   printf '  (Ctrl+C cancels the swarm — orchestrator keeps running)\n'
   read -r -t 10 || true
 
   # Phase B: launch agents
+  printf '%b' "$CLR"
+  printf '\n  %bAI Squad  —  %s%b\n' "$BOLD" "$SESSION" "$R"
   printf '\n  Launching swarm agents...\n\n'
   TAB_INDEX=2   # Tab 1 = orchestrator/dashboard; agents start at Tab 2
 
@@ -144,14 +164,26 @@ else
     printf 'swarm/%s/%s-%s\n' "$SESSION" "$_agent_name" "$_task_num" \
                                > "$_local_agent_dir/branch"
 
+    # Write wrapper invocation to a run script so write-chars never sees
+    # backticks, quotes, or spaces from the task description.
+    _run_script="$_local_agent_dir/run.sh"
+    {
+      printf '#!/usr/bin/env bash\n'
+      printf 'exec bash %q \\\n' "$WRAPPER"
+      printf '  --session %q \\\n' "$SESSION"
+      printf '  --agent %q \\\n' "$_agent_name"
+      printf '  --task-num %q \\\n' "$_task_num"
+      printf '  --prompt %q \\\n' "$_desc"
+      printf '  --project-dir %q \\\n' "$PROJECT_DIR"
+      printf '  --swarm-dir %q\n' "$SWARM_DIR"
+    } > "$_run_script"
+    chmod +x "$_run_script"
+
     # Launch new Zellij tab with wrapper
     if [[ -n "${ZELLIJ:-}" ]]; then
       zellij action new-tab --name "$_tab_name" --cwd "$PROJECT_DIR"
       sleep 0.3
-      _cmd="bash \"$WRAPPER\" --session \"$SESSION\" --agent \"$_agent_name\""
-      _cmd="$_cmd --task-num \"$_task_num\" --prompt \"$_desc\""
-      _cmd="$_cmd --project-dir \"$PROJECT_DIR\" --swarm-dir \"$SWARM_DIR\""
-      zellij action write-chars "$_cmd"
+      zellij action write-chars "bash $(printf '%q' "$_run_script")"
       sleep 0.1
       zellij action write 13
     else
@@ -169,8 +201,14 @@ else
     exit 1
   fi
 
-  printf '\n  %d agents launched. Starting monitor...\n' "$TOTAL"
-  sleep 2
+  printf '\n  %d agents launched. Returning to dashboard...\n' "$TOTAL"
+
+  # Navigate back to Tab 1 (dashboard) so user sees the monitor, not the last agent tab
+  if [[ -n "${ZELLIJ:-}" ]]; then
+    sleep 1
+    zellij action go-to-tab 1 2>/dev/null || true
+  fi
+  sleep 1
 fi
 
 # ── Phase C: live dashboard loop ─────────────────────────────────────────────
