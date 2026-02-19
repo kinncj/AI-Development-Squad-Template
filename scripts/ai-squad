@@ -9,10 +9,13 @@
 # Usage:
 #   ai-squad init          [project-name]          Scaffold template into new or current directory
 #   ai-squad labels        [owner/repo]             Create GitHub labels in current repo
-#   ai-squad swarm feature "<description>"          Plan + swarm in one shot (Claude Code only)
+#   ai-squad swarm                                  Open interactive orchestrator chat (Claude Code only)
+#   ai-squad swarm feature "<description>"          Non-interactive shortcut with pre-loaded description
 #   ai-squad swarm full                             Launch all plan tasks in parallel Zellij tabs
 #   ai-squad swarm tasks   <n> [n...]               Launch specific task numbers
 #   ai-squad swarm agent   <@name> <prompt>         Run a single named agent
+#   ai-squad swarm status  [session-id]             Show agent status table
+#   ai-squad swarm merge   [session-id]             Merge completed agent branches
 #   ai-squad help                                   Show this help
 #
 # Copyright (C) 2025 Kinn Coelho Juliao <kinncj@protonmail.com>
@@ -21,6 +24,7 @@ set -euo pipefail
 
 TOOL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEMPLATE_DIR="$TOOL_DIR/template"
+SCRIPTS_DIR="$TOOL_DIR/scripts"
 PLAN_FILE="${PLAN_FILE:-docs/specs/current/plan.md}"
 GLOBAL_CONFIG="$HOME/.ai-squad.json"   # jingle state — once ever, across all projects
 CONFIG_FILE="$(pwd)/.ai-squad.json"    # project options — per working directory
@@ -117,7 +121,7 @@ ok()      { printf "  ${BGRN}✓${R}  %-32s  ${D}%s${R}\n" "$1" "${2:-}"; }
 info()    { printf "  ${CYN}›${R}  %-16s${B}%s${R}\n" "$1" "${2:-}"; }
 warn()    { printf "  ${BYEL}!${R}  ${YLW}%s${R}\n" "$1"; }
 missing() { printf "  ${BYEL}?${R}  %-32s  ${YLW}not found — %s${R}\n" "$1" "$2"; }
-fail()    { printf "\n  ${BRED}✗${R}  ${B}%s${R}\n\n" "$*" >&2; exit 1; }
+fail()    { printf "\n  ${BRED}✗${R}  ${B}%b${R}\n\n" "$*" >&2; exit 1; }
 
 task_row() {
   local n="$1" agent="$2" desc="$3"
@@ -688,8 +692,20 @@ _kdl_escape() {
 }
 
 _swarm_require_plan() {
-  [[ -f "$PLAN_FILE" ]] || \
-    fail "Plan file not found: ${PLAN_FILE}\n     Run /feature first to generate a plan."
+  if [[ -f "$PLAN_FILE" ]]; then
+    return 0
+  fi
+  # Auto-detect: scan docs/specs/*/plan.md and use the last one found (glob sort).
+  local _p _found=""
+  for _p in docs/specs/*/plan.md; do
+    [[ -f "$_p" ]] && _found="$_p"
+  done
+  if [[ -n "$_found" ]]; then
+    PLAN_FILE="$_found"
+    info "Plan" "auto-detected: $PLAN_FILE"
+    return 0
+  fi
+  fail "Plan file not found: ${PLAN_FILE}\n     Run: ai-squad swarm feature \"<description>\"  to generate one.\n     Or:  PLAN_FILE=docs/specs/<slug>/plan.md ai-squad swarm full"
 }
 
 _extract_tasks() {
@@ -702,65 +718,163 @@ _parse_desc()  {
   echo "$task" | sed "s/.*${agent}//" | sed 's/^[[:space:]]*//'
 }
 
+_swarm_init_session() {
+  # Create .swarm/{session}/ and return the swarm_dir path via stdout.
+  local session="$1" project_dir="$2"
+  local swarm_dir="$project_dir/.swarm/$session"
+  mkdir -p "$swarm_dir/agents" || { printf 'ERROR: cannot create %s\n' "$swarm_dir" >&2; return 1; }
+  local now; now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf '{"session":"%s","project":"%s","started_at":"%s"}\n' \
+    "$session" "$project_dir" "$now" > "$swarm_dir/session.json"
+  printf '%s' "$swarm_dir"
+}
+
+_swarm_session_dir() {
+  # Find the most recent .swarm/swarm-* directory in project_dir (or pwd).
+  local project_dir="${1:-$(pwd)}"
+  local swarm_base="$project_dir/.swarm"
+  [[ -d "$swarm_base" ]] || { printf ''; return 0; }
+  local d latest=""
+  for d in "$swarm_base"/swarm-*/; do
+    [[ -d "$d" ]] && latest="${d%/}"
+  done
+  printf '%s' "$latest"
+}
+
 
 cmd_swarm() {
-  local sub="${1:-help}"; shift || true
+  local sub="${1:-}"; shift || true
+  local _PROJECT_DIR; _PROJECT_DIR="$(pwd)"
+  local _WRAPPER; _WRAPPER="$SCRIPTS_DIR/swarm-agent-wrapper.sh"
+  local _DASHBOARD; _DASHBOARD="$SCRIPTS_DIR/swarm-dashboard.sh"
+  local _MERGE_SCRIPT; _MERGE_SCRIPT="$SCRIPTS_DIR/swarm-merge.sh"
 
   case "$sub" in
+    "")
+      # ── Interactive mode: open orchestrator chat, user types the request ──────
+      local SESSION; SESSION="swarm-$(date +%s)"
+      local SWARM_DIR; SWARM_DIR="$(_swarm_init_session "$SESSION" "$_PROJECT_DIR")"
+
+      header "Swarm"
+      _swarm_require_zellij
+      [[ -n "${ZELLIJ:-}" ]] && fail "Already inside Zellij.  Detach first (Ctrl-o d)"
+
+      info "Session " "$SESSION"
+      info "SwarmDir" "$SWARM_DIR"
+      printf "\n%b\n" "$HR"
+      printf '%b\n' "  ${D}Type your feature request in the orchestrator chat.${R}"
+      printf '%b\n' "  ${D}Phases 1-3 run automatically, then agents launch in new tabs.${R}"
+      printf '%b\n' "  ${D}You will be prompted to review plan.md before agents start.${R}"
+      printf "%b\n\n" "$HR"
+
+      local _LTMP; _LTMP="$(mktemp -d "${TMPDIR:-/tmp}/ai-squad-XXXXXX")"
+      local LAYOUT="${_LTMP}/layout.kdl"
+      local _d_esc; _d_esc="$(_kdl_escape "$_PROJECT_DIR")"
+      local _dash_esc; _dash_esc="$(_kdl_escape "$_DASHBOARD")"
+      local _sw_esc; _sw_esc="$(_kdl_escape "$SWARM_DIR")"
+      local _sess_esc; _sess_esc="$(_kdl_escape "$SESSION")"
+      local _ctx_esc; _ctx_esc="$(_kdl_escape "AI Squad Swarm Session: ${SESSION}. Swarm dir: ${SWARM_DIR}. Project: ${_PROJECT_DIR}. You are in interactive swarm mode — greet the user and ask what feature they want to build. Once they describe it, run Phases 1-3 (DISCOVER, ARCHITECT, PLAN). Write plan.md to docs/specs/<feature-slug>/plan.md then stop. The swarm dashboard will auto-launch agents when plan.md appears.")"
+
+      cat > "$LAYOUT" <<KDL
+layout {
+    cwd "${_d_esc}"
+    tab name="orchestrator" focus=true {
+        pane command="claude" {
+            args "--agent" "orchestrator" "${_ctx_esc}"
+        }
+        pane size=14 command="bash" {
+            args "${_dash_esc}" "${_sess_esc}" "${_sw_esc}" "${_d_esc}"
+        }
+    }
+}
+KDL
+
+      _config_set "swarm.last_subcommand" "interactive"
+      _config_set "swarm.last_session"   "$SESSION"
+      _config_set "swarm.last_run"       "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      session_info
+      zellij --layout "$LAYOUT"
+      rm -rf "$_LTMP"
+      ;;
     full)
       local SESSION; SESSION="swarm-$(date +%s)"
-      local PROJECT_DIR; PROJECT_DIR="$(pwd)"
       header "Swarm  —  Full Plan"
       _swarm_require_zellij
       _swarm_require_plan
       [[ -n "${ZELLIJ:-}" ]] && fail "Already inside Zellij.  Detach first (Ctrl-o d)"
 
-      mapfile -t TASKS < <(_extract_tasks)
+      TASKS=()
+      while IFS= read -r _tline; do TASKS+=("$_tline"); done < <(_extract_tasks)
       [[ ${#TASKS[@]} -eq 0 ]] && \
         fail "No unchecked tasks found in ${PLAN_FILE}\n     All tasks may already be complete."
+
+      local SWARM_DIR; SWARM_DIR="$(_swarm_init_session "$SESSION" "$_PROJECT_DIR")"
 
       info "Plan   " "$PLAN_FILE"
       info "Session" "$SESSION"
       info "Agents " "${#TASKS[@]}"
       printf "\n%b\n" "$HR"
 
-      local i task agent desc
+      local _LTMP; _LTMP="$(mktemp -d "${TMPDIR:-/tmp}/ai-squad-XXXXXX")"
+      local LAYOUT="${_LTMP}/layout.kdl"
+      local _d_esc; _d_esc="$(_kdl_escape "$_PROJECT_DIR")"
+      local _dash_esc; _dash_esc="$(_kdl_escape "$_DASHBOARD")"
+      local _sw_esc; _sw_esc="$(_kdl_escape "$SWARM_DIR")"
+      local _sess_esc; _sess_esc="$(_kdl_escape "$SESSION")"
+      local _wrap_esc; _wrap_esc="$(_kdl_escape "$_WRAPPER")"
+
+      # Pre-create agent dirs so dashboard auto-detects monitor mode
+      local i task agent desc agent_name num agent_dir
       for i in "${!TASKS[@]}"; do
         task="${TASKS[$i]}"
         agent=$(_parse_agent "$task")
         desc=$(_parse_desc  "$task" "$agent")
-        task_row "$((i + 1))" "$agent" "$desc"
+        agent_name="${agent#@}"
+        num=$((i + 1))
+        agent_dir="$SWARM_DIR/agents/${agent_name}-${num}"
+        mkdir -p "$agent_dir"
+        printf '%s\n' "$desc"    > "$agent_dir/task.md"
+        printf 'pending\n'       > "$agent_dir/status"
+        printf 'swarm/%s/%s-%s\n' "$SESSION" "$agent_name" "$num" > "$agent_dir/branch"
+        task_row "$num" "$agent" "$desc"
       done
       printf "%b\n\n" "$HR"
 
-      local _LTMP; _LTMP="$(mktemp -d "${TMPDIR:-/tmp}/ai-squad-XXXXXX")"
-      local LAYOUT="${_LTMP}/layout.kdl"
-      local _d_esc; _d_esc="$(_kdl_escape "$PROJECT_DIR")"
+      # Tab 1: dashboard (monitor mode — agent dirs already exist)
+      {
+        printf 'layout {\n'
+        printf '    cwd "%s"\n' "$_d_esc"
+        printf '    tab name="dashboard" focus=true {\n'
+        printf '        pane command="bash" {\n'
+        printf '            args "%s" "%s" "%s" "%s"\n' \
+          "$_dash_esc" "$_sess_esc" "$_sw_esc" "$_d_esc"
+        printf '        }\n'
+        printf '    }\n'
+      } > "$LAYOUT"
 
-      printf 'layout {\n'                  > "$LAYOUT"
-      printf '    cwd "%s"\n' "$_d_esc"   >> "$LAYOUT"
-      local _first=1
+      # Tabs 2+: one wrapper per agent
       for i in "${!TASKS[@]}"; do
         task="${TASKS[$i]}"
         agent=$(_parse_agent "$task")
         desc=$(_parse_desc  "$task" "$agent")
-        local _n="${agent#@}-$((i+1))"
-        local _n_esc; _n_esc="$(_kdl_escape "$_n")"
-        local _a_esc; _a_esc="$(_kdl_escape "${agent#@}")"
+        agent_name="${agent#@}"
+        num=$((i + 1))
+        local _n_esc; _n_esc="$(_kdl_escape "${agent_name}-${num}")"
+        local _a_esc; _a_esc="$(_kdl_escape "$agent_name")"
         local _p_esc; _p_esc="$(_kdl_escape "$desc")"
+        local _num_esc; _num_esc="$(_kdl_escape "$num")"
         {
-          if [[ "$_first" -eq 1 ]]; then
-            printf '    tab name="%s" focus=true {\n' "$_n_esc"
-            _first=0
-          else
-            printf '    tab name="%s" {\n' "$_n_esc"
-          fi
-          printf '        pane command="claude" {\n'
-          printf '            args "--agent" "%s" "%s"\n' "$_a_esc" "$_p_esc"
+          printf '    tab name="%s" {\n' "$_n_esc"
+          printf '        pane command="bash" {\n'
+          printf '            args "%s" "--session" "%s" "--agent" "%s"' \
+            "$_wrap_esc" "$_sess_esc" "$_a_esc"
+          printf ' "--task-num" "%s" "--prompt" "%s"' "$_num_esc" "$_p_esc"
+          printf ' "--project-dir" "%s" "--swarm-dir" "%s"\n' "$_d_esc" "$_sw_esc"
           printf '        }\n'
           printf '    }\n'
         } >> "$LAYOUT"
-        ok "Launched  ${BCYN}${agent}${R}"
+        ok "Queued  ${BCYN}${agent}${R}"
       done
       printf '}\n' >> "$LAYOUT"
 
@@ -778,15 +892,17 @@ cmd_swarm() {
       [[ $# -eq 0 ]] && fail "Specify task numbers.  Usage: ai-squad swarm tasks 1 3 5"
       local TASK_NUMS=("$@")
       local SESSION; SESSION="swarm-$(date +%s)"
-      local PROJECT_DIR; PROJECT_DIR="$(pwd)"
 
       header "Swarm  —  Selected Tasks"
       _swarm_require_zellij
       _swarm_require_plan
       [[ -n "${ZELLIJ:-}" ]] && fail "Already inside Zellij.  Detach first (Ctrl-o d)"
 
-      mapfile -t ALL_TASKS < <(_extract_tasks)
+      ALL_TASKS=()
+      while IFS= read -r _tline; do ALL_TASKS+=("$_tline"); done < <(_extract_tasks)
       [[ ${#ALL_TASKS[@]} -eq 0 ]] && fail "No tasks found in ${PLAN_FILE}"
+
+      local SWARM_DIR; SWARM_DIR="$(_swarm_init_session "$SESSION" "$_PROJECT_DIR")"
 
       info "Session" "$SESSION"
       info "Tasks  " "${TASK_NUMS[*]}"
@@ -794,11 +910,25 @@ cmd_swarm() {
 
       local _LTMP; _LTMP="$(mktemp -d "${TMPDIR:-/tmp}/ai-squad-XXXXXX")"
       local LAYOUT="${_LTMP}/layout.kdl"
-      local _d_esc; _d_esc="$(_kdl_escape "$PROJECT_DIR")"
+      local _d_esc; _d_esc="$(_kdl_escape "$_PROJECT_DIR")"
+      local _dash_esc; _dash_esc="$(_kdl_escape "$_DASHBOARD")"
+      local _sw_esc; _sw_esc="$(_kdl_escape "$SWARM_DIR")"
+      local _sess_esc; _sess_esc="$(_kdl_escape "$SESSION")"
+      local _wrap_esc; _wrap_esc="$(_kdl_escape "$_WRAPPER")"
 
-      printf 'layout {\n'                  > "$LAYOUT"
-      printf '    cwd "%s"\n' "$_d_esc"   >> "$LAYOUT"
-      local _pane_idx=0 NUM task agent desc
+      # Tab 1: dashboard (monitor mode — agent dirs pre-created below)
+      {
+        printf 'layout {\n'
+        printf '    cwd "%s"\n' "$_d_esc"
+        printf '    tab name="dashboard" focus=true {\n'
+        printf '        pane command="bash" {\n'
+        printf '            args "%s" "%s" "%s" "%s"\n' \
+          "$_dash_esc" "$_sess_esc" "$_sw_esc" "$_d_esc"
+        printf '        }\n'
+        printf '    }\n'
+      } > "$LAYOUT"
+
+      local _pane_idx=0 NUM task agent desc agent_name agent_dir
       for NUM in "${TASK_NUMS[@]}"; do
         task=$(printf '%s\n' "${ALL_TASKS[@]}" | grep "Task ${NUM}:" || true)
         if [[ -z "$task" ]]; then
@@ -807,23 +937,31 @@ cmd_swarm() {
         fi
         agent=$(_parse_agent "$task")
         desc=$(_parse_desc  "$task" "$agent")
+        agent_name="${agent#@}"
         task_row "$NUM" "$agent" "$desc"
-        local _n="${agent#@}-${NUM}"
-        local _n_esc; _n_esc="$(_kdl_escape "$_n")"
-        local _a_esc; _a_esc="$(_kdl_escape "${agent#@}")"
+
+        # Pre-create agent dir so dashboard sees it immediately
+        agent_dir="$SWARM_DIR/agents/${agent_name}-${NUM}"
+        mkdir -p "$agent_dir"
+        printf '%s\n' "$desc"    > "$agent_dir/task.md"
+        printf 'pending\n'       > "$agent_dir/status"
+        printf 'swarm/%s/%s-%s\n' "$SESSION" "$agent_name" "$NUM" > "$agent_dir/branch"
+
+        local _n_esc; _n_esc="$(_kdl_escape "${agent_name}-${NUM}")"
+        local _a_esc; _a_esc="$(_kdl_escape "$agent_name")"
         local _p_esc; _p_esc="$(_kdl_escape "$desc")"
+        local _num_esc; _num_esc="$(_kdl_escape "$NUM")"
         {
-          if [[ "$_pane_idx" -eq 0 ]]; then
-            printf '    tab name="%s" focus=true {\n' "$_n_esc"
-          else
-            printf '    tab name="%s" {\n' "$_n_esc"
-          fi
-          printf '        pane command="claude" {\n'
-          printf '            args "--agent" "%s" "%s"\n' "$_a_esc" "$_p_esc"
+          printf '    tab name="%s" {\n' "$_n_esc"
+          printf '        pane command="bash" {\n'
+          printf '            args "%s" "--session" "%s" "--agent" "%s"' \
+            "$_wrap_esc" "$_sess_esc" "$_a_esc"
+          printf ' "--task-num" "%s" "--prompt" "%s"' "$_num_esc" "$_p_esc"
+          printf ' "--project-dir" "%s" "--swarm-dir" "%s"\n' "$_d_esc" "$_sw_esc"
           printf '        }\n'
           printf '    }\n'
         } >> "$LAYOUT"
-        ok "Launched  ${BCYN}${agent}${R}"
+        ok "Queued  ${BCYN}${agent}${R}"
         _pane_idx=$((_pane_idx + 1))
       done
       printf '}\n' >> "$LAYOUT"
@@ -849,7 +987,6 @@ cmd_swarm() {
       [[ $# -lt 2 ]] && fail "Usage: ai-squad swarm agent @agent-name \"prompt\""
       local AGENT="$1"; shift
       local PROMPT="$*"
-      local PROJECT_DIR; PROJECT_DIR="$(pwd)"
       local SESSION; SESSION="swarm-$(date +%s)"
 
       header "Swarm  —  Single Agent"
@@ -864,7 +1001,7 @@ cmd_swarm() {
       local _name="${AGENT#@}"
       local _n_esc; _n_esc="$(_kdl_escape "$_name")"
       local _p_esc; _p_esc="$(_kdl_escape "$PROMPT")"
-      local _d_esc; _d_esc="$(_kdl_escape "$PROJECT_DIR")"
+      local _d_esc; _d_esc="$(_kdl_escape "$_PROJECT_DIR")"
 
       cat > "$LAYOUT" <<KDL
 layout {
@@ -896,9 +1033,7 @@ KDL
       [[ $# -eq 0 ]] && fail "Usage: ai-squad swarm feature \"<feature description>\""
       local FEATURE_DESC="$*"
       local SESSION; SESSION="swarm-$(date +%s)"
-      local PROJECT_DIR; PROJECT_DIR="$(pwd)"
-      # Create a timestamp sentinel: any plan.md newer than this file belongs to this run.
-      local SENTINEL; SENTINEL="$(mktemp "${TMPDIR:-/tmp}/ai-squad-sentinel.XXXXXX")"
+      local SWARM_DIR; SWARM_DIR="$(_swarm_init_session "$SESSION" "$_PROJECT_DIR")"
 
       header "Swarm  —  Feature Pipeline"
       _swarm_require_zellij
@@ -906,67 +1041,22 @@ KDL
 
       info "Feature" "$FEATURE_DESC"
       info "Session" "$SESSION"
+      info "SwarmDir" "$SWARM_DIR"
       info "Plan   " "docs/specs/<feature-slug>/plan.md  (auto-detected)"
       printf "\n%b\n" "$HR"
       printf '%b\n' "  ${D}Phase 1-3: orchestrator runs Discover → Architect → Plan.${R}"
-      printf '%b\n' "  ${D}Phase 5:   swarm agents auto-launch once plan.md is ready.${R}"
+      printf '%b\n' "  ${D}Phase 5:   dashboard auto-launches agents once plan.md appears.${R}"
+      printf '%b\n' "  ${D}Phase 6+:  orchestrator resumes after all agents complete.${R}"
       printf "%b\n\n" "$HR"
 
-      # Write the watcher script to a temp file.
-      # Use printf for the variable assignments (portable, no %q needed for paths/means).
-      # Use a quoted heredoc for the body so inner $ signs are literal.
-      local WATCHER; WATCHER="$(mktemp "${TMPDIR:-/tmp}/ai-squad-watcher.XXXXXX")"
-      {
-        printf '#!/usr/bin/env bash\n'
-        printf 'PROJECT_DIR="%s"\n'  "$PROJECT_DIR"
-        printf 'SENTINEL="%s"\n'     "$SENTINEL"
-        cat <<'WATCHER_BODY'
-cd "$PROJECT_DIR" || exit 1
-printf '\n  Watching for: docs/specs/<feature-slug>/plan.md\n'
-# Poll until a plan.md appears that is newer than the sentinel file (i.e. created this run).
-PLAN_FILE=""
-while [[ -z "$PLAN_FILE" ]]; do
-  PLAN_FILE=$(find "$PROJECT_DIR/docs/specs" -name "plan.md" -newer "$SENTINEL" 2>/dev/null | head -1)
-  [[ -n "$PLAN_FILE" ]] && break
-  sleep 3
-  printf '.'
-done
-rm -f "$SENTINEL"
-printf '\n\n  Plan found: %s\n' "$PLAN_FILE"
-printf '  Press Enter to launch swarm now, or wait 10 s.\n'
-printf '  (Ctrl+C skips the swarm — orchestrator keeps running)\n\n'
-read -r -t 10 || true
-printf '\n  Launching swarm agents...\n'
-COUNT=0
-while IFS= read -r task; do
-  agent=$(echo "$task" | grep -oE '@[a-zA-Z0-9_-]+' | head -1)
-  desc=$(echo "$task" | sed "s/.*${agent}//" | sed 's/^[[:space:]]*//')
-  TAB_NAME="${agent#@}-$((COUNT+1))"
-  zellij action new-tab --name "$TAB_NAME" --cwd "$PROJECT_DIR"
-  sleep 0.3
-  zellij action write-chars "claude --agent ${agent#@} \"${desc}\""
-  sleep 0.1
-  zellij action write 13
-  COUNT=$((COUNT + 1))
-done < <(grep -E '^\- \[ \] Task [0-9]+:' "$PLAN_FILE" 2>/dev/null)
-printf '\n  Swarm launched: %d agents in %d tabs.\n' "$COUNT" "$COUNT"
-printf '  ┌─ Navigate ──────────────────────────────────────┐\n'
-printf '  │  Alt-n     → next tab (next agent)              │\n'
-printf '  │  Alt-p     → previous tab                       │\n'
-printf '  │  Alt-1     → tab 1 = orchestrator               │\n'
-printf '  │  Ctrl-t    → open tab manager                   │\n'
-printf '  └──────────────────────────────────────────────────┘\n'
-zellij action go-to-tab 1
-WATCHER_BODY
-      } > "$WATCHER"
-      chmod +x "$WATCHER"
-
-      # Generate KDL layout: orchestrator tab with main pane + watcher pane.
       local _LTMP; _LTMP="$(mktemp -d "${TMPDIR:-/tmp}/ai-squad-XXXXXX")"
       local LAYOUT="${_LTMP}/layout.kdl"
-      local _d_esc; _d_esc="$(_kdl_escape "$PROJECT_DIR")"
-      local _f_esc; _f_esc="$(_kdl_escape "Run the full 8-phase pipeline for this feature request: ${FEATURE_DESC}")"
-      local _w_esc; _w_esc="$(_kdl_escape "$WATCHER")"
+      local _d_esc; _d_esc="$(_kdl_escape "$_PROJECT_DIR")"
+      local _f_esc; _f_esc="$(_kdl_escape "Run phases 1-3 only (DISCOVER, ARCHITECT, PLAN). Write plan.md to docs/specs/<feature-slug>/plan.md then stop. Do NOT proceed to Phase 4 or 5. Feature request: ${FEATURE_DESC}")"
+      local _dash_esc; _dash_esc="$(_kdl_escape "$_DASHBOARD")"
+      local _sw_esc; _sw_esc="$(_kdl_escape "$SWARM_DIR")"
+      local _sess_esc; _sess_esc="$(_kdl_escape "$SESSION")"
+      local _feat_esc; _feat_esc="$(_kdl_escape "$FEATURE_DESC")"
 
       cat > "$LAYOUT" <<KDL
 layout {
@@ -975,8 +1065,8 @@ layout {
         pane command="claude" {
             args "--agent" "orchestrator" "${_f_esc}"
         }
-        pane size=10 command="bash" {
-            args "${_w_esc}"
+        pane size=14 command="bash" {
+            args "${_dash_esc}" "${_sess_esc}" "${_sw_esc}" "${_d_esc}" "${_feat_esc}"
         }
     }
 }
@@ -989,16 +1079,83 @@ KDL
 
       session_info
       zellij --layout "$LAYOUT"
-      rm -rf "$_LTMP" "$WATCHER" "$SENTINEL"
+      rm -rf "$_LTMP"
       ;;
 
-    help | *)
+    status)
+      local _SID="${1:-}"
+      local _swarm_base="$_PROJECT_DIR/.swarm"
+      local _STATUS_DIR
+      if [[ -n "$_SID" ]]; then
+        _STATUS_DIR="$_swarm_base/$_SID"
+      else
+        _STATUS_DIR="$(_swarm_session_dir "$_PROJECT_DIR")"
+      fi
+      [[ -z "$_STATUS_DIR" ]] && \
+        fail "No swarm session found in ${_swarm_base}\n     Run: ai-squad swarm feature \"<description>\""
+      [[ -d "$_STATUS_DIR" ]] || fail "Session dir not found: $_STATUS_DIR"
+
+      local _sname; _sname="$(basename "$_STATUS_DIR")"
+      header "Swarm Status  —  $_sname"
+
+      local _adir="$_STATUS_DIR/agents"
+      if [[ ! -d "$_adir" ]] || [[ -z "$(ls -A "$_adir" 2>/dev/null)" ]]; then
+        info "No agents" "Agents have not been launched yet"
+        exit 0
+      fi
+
+      printf '\n  %-26s %-10s %-6s %s\n' "AGENT" "STATUS" "EXIT" "BRANCH"
+      printf '  ────────────────────────── ────────── ────── ──────\n'
+
+      local _total=0 _done=0 _err=0 _run=0 _pend=0
+      local _aname _st _ec _br _ad
+      for _ad in "$_adir"/*/; do
+        [[ -d "$_ad" ]] || continue
+        _aname="$(basename "$_ad")"
+        _st="---" _ec="---" _br="---"
+        [[ -f "$_ad/status" ]]    && _st="$(cat "$_ad/status")"
+        [[ -f "$_ad/exit_code" ]] && _ec="$(cat "$_ad/exit_code")"
+        [[ -f "$_ad/branch" ]]    && _br="$(cat "$_ad/branch")"
+        printf '  %-26s %-10s %-6s %s\n' "$_aname" "$_st" "$_ec" "$_br"
+        _total=$((_total + 1))
+        case "$_st" in
+          done)    _done=$((_done+1)) ;;
+          error)   _err=$((_err+1)) ;;
+          running) _run=$((_run+1)) ;;
+          *)       _pend=$((_pend+1)) ;;
+        esac
+      done
+      printf '\n  %d total  ·  %d done  ·  %d running  ·  %d error  ·  %d pending\n\n' \
+        "$_total" "$_done" "$_run" "$_err" "$_pend"
+      ;;
+
+    merge)
+      local _SID="${1:-}"
+      local _swarm_base="$_PROJECT_DIR/.swarm"
+      local _MERGE_DIR
+      if [[ -n "$_SID" ]]; then
+        _MERGE_DIR="$_swarm_base/$_SID"
+      else
+        _MERGE_DIR="$(_swarm_session_dir "$_PROJECT_DIR")"
+      fi
+      [[ -z "$_MERGE_DIR" ]] && \
+        fail "No swarm session found in ${_swarm_base}\n     Run: ai-squad swarm feature \"<description>\""
+      [[ -d "$_MERGE_DIR" ]] || fail "Session dir not found: $_MERGE_DIR"
+
+      local _sname; _sname="$(basename "$_MERGE_DIR")"
+      header "Swarm Merge  —  $_sname"
+      bash "$_MERGE_SCRIPT" "$_sname" "$_MERGE_DIR" "$_PROJECT_DIR"
+      ;;
+
+    help | --help | -h | *)
       banner
       printf '%b\n\n' "  ${B}USAGE${R}"
-      printf '%b\n\n' "    ${D}ai-squad swarm${R} ${B}<subcommand>${R} ${D}[arguments]${R}"
+      printf '%b\n\n' "    ${D}ai-squad swarm${R}  ${D}[subcommand] [arguments]${R}"
       printf "%b\n" "$HR"
+      printf '%b\n' "  ${BCYN}(no args)${R}"
+      printf '%b\n\n' "  ${D}    Open interactive orchestrator chat — type your feature request inside${R}"
       printf '%b\n' "  ${BCYN}feature${R}  ${D}\"<description>\"${R}"
-      printf '%b\n\n' "  ${D}    Run orchestrator to plan, then auto-launch swarm agents${R}"
+      printf '%b\n\n' "  ${D}    Non-interactive shortcut: pre-loads the feature description${R}"
       printf '%b\n' "  ${BCYN}full${R}"
       printf '%b\n' "  ${D}    Launch all unchecked tasks from:${R}"
       printf '  %b    %s%b\n\n' "${D}" "$PLAN_FILE" "${R}"
@@ -1006,6 +1163,10 @@ KDL
       printf '%b\n\n' "  ${D}    Launch specific task numbers from the plan${R}"
       printf '%b\n' "  ${BCYN}agent${R}  ${D}<@name> <prompt>${R}"
       printf '%b\n\n' "  ${D}    Run a single named agent with a custom prompt${R}"
+      printf '%b\n' "  ${BCYN}status${R}  ${D}[session-id]${R}"
+      printf '%b\n\n' "  ${D}    Show agent status for the latest (or named) swarm session${R}"
+      printf '%b\n' "  ${BCYN}merge${R}   ${D}[session-id]${R}"
+      printf '%b\n\n' "  ${D}    Merge completed agent branches into the current branch${R}"
       printf "%b\n" "$HR"
       printf '%b\n\n' "  ${D}PLAN_FILE env var overrides the default plan path${R}"
       ;;
@@ -1029,9 +1190,9 @@ cmd_help() {
   printf '%b\n' "  ${BCYN}labels${R}  ${D}[owner/repo]${R}"
   printf '%b\n\n' "  ${D}    Create GitHub issue labels for the squad pipeline${R}"
 
-  printf '%b\n' "  ${BCYN}swarm${R}   ${D}<feature \"...\" | full | tasks <n...> | agent <@name> <prompt>>${R}"
-  printf '%b\n' "  ${D}    Launch agents in parallel Zellij tabs (Claude Code only)${R}"
-  printf '%b\n\n' "  ${D}    Run: ai-squad swarm help  for details${R}"
+  printf '%b\n' "  ${BCYN}swarm${R}   ${D}[feature \"...\" | full | tasks <n...> | agent | status | merge]${R}"
+  printf '%b\n' "  ${D}    Multi-agent pipeline in Zellij (Claude Code only)${R}"
+  printf '%b\n\n' "  ${D}    No args = interactive chat  ·  ai-squad swarm help for all subcommands${R}"
 
   printf "%b\n" "$HR"
   printf '%b\n\n' "  ${B}EXAMPLES${R}"

@@ -21,6 +21,9 @@ jobs:
       - name: Lint ai-squad CLI
         run: shellcheck -x scripts/ai-squad
 
+      - name: Lint swarm scripts
+        run: shellcheck -x scripts/swarm-agent-wrapper.sh scripts/swarm-dashboard.sh scripts/swarm-merge.sh
+
       - name: Lint test scripts
         run: find tests -name "*.sh" -exec shellcheck -x {} +
 

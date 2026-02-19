@@ -46,3 +46,6 @@ test-results/
 
 # AI Squad CLI state (if ai-squad is installed inside the project)
 .ai-squad.json
+
+# Swarm v2 session data (worktrees, status files, result.md)
+.swarm/

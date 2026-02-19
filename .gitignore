@@ -25,3 +25,6 @@ npm-debug.log*
 # Claude Code local settings (generated at runtime, not template content)
 .claude/settings.local.json
 var/*
+
+# Swarm v2 session data (worktrees, status files, result.md)
+.swarm/
