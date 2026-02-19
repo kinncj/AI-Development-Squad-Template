@@ -748,16 +748,18 @@ cmd_swarm() {
         local _n_esc; _n_esc="$(_kdl_escape "$_n")"
         local _a_esc; _a_esc="$(_kdl_escape "${agent#@}")"
         local _p_esc; _p_esc="$(_kdl_escape "$desc")"
-        if [[ "$_first" -eq 1 ]]; then
-          printf '    tab name="%s" focus=true {\n' "$_n_esc" >> "$LAYOUT"
-          _first=0
-        else
-          printf '    tab name="%s" {\n' "$_n_esc" >> "$LAYOUT"
-        fi
-        printf '        pane command="claude" {\n'                         >> "$LAYOUT"
-        printf '            args "--agent" "%s" "%s"\n' "$_a_esc" "$_p_esc" >> "$LAYOUT"
-        printf '        }\n'                                                >> "$LAYOUT"
-        printf '    }\n'                                                    >> "$LAYOUT"
+        {
+          if [[ "$_first" -eq 1 ]]; then
+            printf '    tab name="%s" focus=true {\n' "$_n_esc"
+            _first=0
+          else
+            printf '    tab name="%s" {\n' "$_n_esc"
+          fi
+          printf '        pane command="claude" {\n'
+          printf '            args "--agent" "%s" "%s"\n' "$_a_esc" "$_p_esc"
+          printf '        }\n'
+          printf '    }\n'
+        } >> "$LAYOUT"
         ok "Launched  ${BCYN}${agent}${R}"
       done
       printf '}\n' >> "$LAYOUT"
@@ -810,15 +812,17 @@ cmd_swarm() {
         local _n_esc; _n_esc="$(_kdl_escape "$_n")"
         local _a_esc; _a_esc="$(_kdl_escape "${agent#@}")"
         local _p_esc; _p_esc="$(_kdl_escape "$desc")"
-        if [[ "$_pane_idx" -eq 0 ]]; then
-          printf '    tab name="%s" focus=true {\n' "$_n_esc" >> "$LAYOUT"
-        else
-          printf '    tab name="%s" {\n' "$_n_esc" >> "$LAYOUT"
-        fi
-        printf '        pane command="claude" {\n'                           >> "$LAYOUT"
-        printf '            args "--agent" "%s" "%s"\n' "$_a_esc" "$_p_esc" >> "$LAYOUT"
-        printf '        }\n'                                                  >> "$LAYOUT"
-        printf '    }\n'                                                      >> "$LAYOUT"
+        {
+          if [[ "$_pane_idx" -eq 0 ]]; then
+            printf '    tab name="%s" focus=true {\n' "$_n_esc"
+          else
+            printf '    tab name="%s" {\n' "$_n_esc"
+          fi
+          printf '        pane command="claude" {\n'
+          printf '            args "--agent" "%s" "%s"\n' "$_a_esc" "$_p_esc"
+          printf '        }\n'
+          printf '    }\n'
+        } >> "$LAYOUT"
         ok "Launched  ${BCYN}${agent}${R}"
         _pane_idx=$((_pane_idx + 1))
       done
