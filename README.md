@@ -50,7 +50,7 @@ This template gives you:
 | [Docker](https://docker.com) | Test infrastructure | docker.com |
 | [GitHub CLI](https://cli.github.com) | Issue and PR management | `brew install gh` |
 | [Node.js](https://nodejs.org) | Playwright E2E tests | nodejs.org |
-| [tmux](https://github.com/tmux/tmux) | Swarm mode (Claude Code only) | `brew install tmux` |
+| [Zellij](https://zellij.dev) | Swarm mode (Claude Code only) | `brew install zellij` |
 
 **License requirements:**
 - Claude Code Max subscription (includes `claude-opus-4-6` and `claude-sonnet-4-6`)
@@ -73,11 +73,7 @@ source ~/.zshrc
 mkdir my-project && cd my-project
 ai-squad init
 
-# 3. Authenticate platforms
-gh auth login
-export ANTHROPIC_API_KEY=your_key_here  # for OpenCode
-
-# 4. Start a feature
+# 3. Start a feature
 claude /feature "user registration with email and OAuth"
 ```
 
@@ -294,18 +290,72 @@ Skills ship with content but you can extend them. Each `SKILL.md` teaches agents
 
 ## Swarm Mode (Claude Code only)
 
-Run multiple agents in parallel on independent tasks using tmux. The orchestrator produces `plan.md` during Phase 3; `ai-squad swarm` reads it and spawns one tmux pane per task.
+Run multiple agents in parallel on independent tasks using [Zellij](https://zellij.dev). Each agent gets its own tab; you switch between them with `Alt-n` / `Alt-p`.
+
+> **Requires:** `brew install zellij` (>= 0.41.0). Do not run from inside an existing Zellij session.
+
+### Full pipeline — plan + swarm in one shot
+
+The recommended entry point. The orchestrator runs Phases 1–3 (Discover → Architect → Plan), writes `plan.md`, and the watcher automatically launches one agent tab per task:
 
 ```bash
-# Run all tasks from docs/specs/current/plan.md in parallel
+ai-squad swarm feature "create a plain C and a static HTML version of the weather app"
+```
+
+What happens:
+1. A Zellij session opens with an **orchestrator** tab running Claude through the full pipeline
+2. A small **watcher** pane polls for `docs/specs/<slug>/plan.md`
+3. Once the plan is ready, press Enter (or wait 10 s) to launch all agent tabs automatically
+4. Navigate between agents with `Alt-n` / `Alt-p`; return to orchestrator with `Alt-1`
+
+### Other swarm commands
+
+```bash
+# Launch all unchecked tasks from docs/specs/current/plan.md
 ai-squad swarm full
 
-# Run specific task numbers
+# Launch specific task numbers only
 ai-squad swarm tasks 3 5 7
 
-# Run a single agent with a specific prompt
+# Run a single named agent with a custom prompt
 ai-squad swarm agent @dotnet "make the test at tests/unit/OrderTests.cs pass"
 ```
+
+### Navigating inside Zellij
+
+**Tabs** (each agent runs in its own tab):
+
+| Action | macOS | Linux | Windows (WSL) |
+|---|---|---|---|
+| Next tab | `⌥ n` | `Alt-n` | `Alt-n` |
+| Previous tab | `⌥ p` | `Alt-p` | `Alt-p` |
+| Jump to tab N | `⌥ 1` … `⌥ 9` | `Alt-1` … `Alt-9` | `Alt-1` … `Alt-9` |
+| Tab manager / overview | `Ctrl-t` | `Ctrl-t` | `Ctrl-t` |
+
+> **macOS — Option key setup:**
+> ⌥ = the **Option** key, but your terminal must forward it as `Alt` (escape sequence).
+> - **iTerm2**: works out of the box.
+> - **Terminal.app**: Preferences → Profiles → Keyboard → enable **"Use Option as Meta key"**.
+> - **Ghostty / Warp / Kitty**: enabled by default.
+
+> **Windows — prerequisite:** run Zellij inside **WSL 2** (Ubuntu or similar) using **Windows Terminal**. `Alt` keys work natively. Native Windows builds of Zellij are not yet stable.
+
+**Panes** (within a tab — e.g. orchestrator + watcher pane):
+
+| Action | macOS / Linux / Windows |
+|---|---|
+| Move focus to another pane | `Ctrl-p` then `Arrow` |
+| Zoom / fullscreen focused pane | `Ctrl-p` then `z` |
+| Close focused pane | `Ctrl-p` then `x` |
+
+**Session management:**
+
+| Action | macOS / Linux / Windows |
+|---|---|
+| Detach (session stays running) | `Ctrl-o` then `d` |
+| List running sessions | `zellij list-sessions` |
+| Reattach to a session | `zellij attach <name>` |
+| Kill a session (from outside Zellij) | `zellij kill-session <name>` |
 
 ---
 

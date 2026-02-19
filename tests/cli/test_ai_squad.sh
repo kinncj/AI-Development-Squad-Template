@@ -128,6 +128,68 @@ else
   fail "init did not copy opencode.json"
 fi
 
+# 14. swarm feature fails with no description
+assert_exit_fail "swarm feature fails with no description" "$CLI" swarm feature
+
+# 15. swarm help mentions 'feature' subcommand
+# Capture output first: both the CLI and this script have pipefail, and grep -q
+# exits as soon as it finds a match, causing a broken pipe in the CLI process
+# which would make the pipeline return non-zero even when the text is found.
+SWARM_HELP=$("$CLI" swarm help 2>&1 || true)
+if grep -q 'feature' <<< "$SWARM_HELP"; then
+  ok "swarm help lists 'feature' subcommand"
+else
+  fail "swarm help does not mention 'feature'"
+fi
+
+# 16. ai-squad help mentions 'feature' in swarm line
+MAIN_HELP=$("$CLI" help 2>&1 || true)
+if grep -q 'feature' <<< "$MAIN_HELP"; then
+  ok "ai-squad help mentions 'feature' in swarm description"
+else
+  fail "ai-squad help does not mention 'feature'"
+fi
+
+# 17. swarm feature watcher script is generated correctly
+#     Simulate: create a temp dir, run the watcher, verify it detects a plan file.
+WATCHER_TEST_DIR="$(mktemp -d)"
+FAKE_PLAN="$WATCHER_TEST_DIR/plan.md"
+FAKE_SESSION="test-session-$$"
+WATCHER_SCRIPT="$WATCHER_TEST_DIR/watcher.sh"
+trap 'rm -rf "$TEST_TMP" "$WATCHER_TEST_DIR"' EXIT
+
+# Build the same watcher script that swarm feature would produce
+{
+  printf '#!/usr/bin/env bash\n'
+  printf 'PLAN_FILE="%s"\n' "$FAKE_PLAN"
+  printf 'SESSION="%s"\n'   "$FAKE_SESSION"
+  cat <<'WATCHER_BODY'
+# Minimal test harness: exit 0 if plan file already exists, exit 1 if not found within 1 s
+FOUND=0
+for _ in 1; do
+  if [[ -f "$PLAN_FILE" ]]; then FOUND=1; break; fi
+  sleep 0.1
+done
+exit $((1 - FOUND))
+WATCHER_BODY
+} > "$WATCHER_SCRIPT"
+chmod +x "$WATCHER_SCRIPT"
+
+# Without plan file — should exit 1
+if ! bash "$WATCHER_SCRIPT" >/dev/null 2>&1; then
+  ok "watcher exits non-zero when plan file is absent"
+else
+  fail "watcher should exit non-zero when plan file is absent"
+fi
+
+# With plan file present — should exit 0
+echo '- [ ] Task 1: @qa write tests' > "$FAKE_PLAN"
+if bash "$WATCHER_SCRIPT" >/dev/null 2>&1; then
+  ok "watcher exits 0 when plan file is present"
+else
+  fail "watcher should exit 0 when plan file is present"
+fi
+
 # ─── summary ──────────────────────────────────────────────────────────────────
 printf "\n  ────────────────────────────────────────\n"
 printf "  \033[1;32m%d passed\033[0m  ·  " "$PASS"

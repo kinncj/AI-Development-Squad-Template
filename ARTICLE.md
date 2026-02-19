@@ -20,7 +20,7 @@ This article walks through a complete orchestrated multi-agent system with **27 
 
 Anthropic's terminal-based agentic coding tool. Agent definitions live in `.claude/agents/`, commands in `.claude/commands/`, skills in `.claude/skills/`.
 
-Key characteristics: agents defined with `name`, `description`, `model` in YAML frontmatter. Subagents invoked via `@agent-name`. Commands via `/command-name`. Supports **swarm mode** for parallel execution via tmux.
+Key characteristics: agents defined with `name`, `description`, `model` in YAML frontmatter. Subagents invoked via `@agent-name`. Commands via `/command-name`. Supports **swarm mode** for parallel execution via Zellij.
 
 ### OpenCode (GitHub Copilot Enterprise)
 
@@ -1390,7 +1390,7 @@ source ~/.zshrc
 |---|---|
 | `ai-squad init [project-name]` | Scaffold template into new or current directory, git init, npm install, optional labels |
 | `ai-squad labels [owner/repo]` | Create all GitHub issue labels for the squad pipeline |
-| `ai-squad swarm full` | Launch all plan.md tasks in parallel tmux panes |
+| `ai-squad swarm full` | Launch all plan.md tasks in parallel Zellij tabs |
 | `ai-squad swarm tasks 1 3 5` | Launch specific task numbers |
 | `ai-squad swarm agent @dotnet "prompt"` | Run a single named agent |
 
@@ -1415,7 +1415,7 @@ PLAN_FILE="${PLAN_FILE:-docs/specs/current/plan.md}"
 # Usage:
 #   ai-squad init   [project-name]          Scaffold template into new or current directory
 #   ai-squad labels [owner/repo]            Create GitHub labels in current repo
-#   ai-squad swarm  full                    Launch all plan tasks in parallel tmux panes
+#   ai-squad swarm  full                    Launch all plan tasks in parallel Zellij tabs
 #   ai-squad swarm  tasks <n> [n...]        Launch specific task numbers
 #   ai-squad swarm  agent <@name> <prompt>  Run a single named agent
 #   ai-squad help                           Show this help
@@ -1463,8 +1463,8 @@ session_info() {
   local session="$1"
   printf "\n%b\n" "$HR"
   printf "  ${CYN}›${R}  Session   ${B}%s${R}\n" "$session"
-  printf "  ${D}›  Detach   Ctrl-b d${R}\n"
-  printf "  ${D}›  Kill     tmux kill-session -t %s${R}\n" "$session"
+  printf "  ${D}›  Detach   Ctrl-o d${R}\n"
+  printf "  ${D}›  Kill     zellij delete-session %s${R}\n" "$session"
   printf "%b\n\n" "$HR"
 }
 
@@ -1619,9 +1619,9 @@ cmd_labels() {
 }
 
 # ─── swarm ────────────────────────────────────────────────────────────────────
-_swarm_require_tmux() {
-  command -v tmux &>/dev/null || \
-    fail "tmux not installed.  Install with: brew install tmux"
+_swarm_require_zellij() {
+  command -v zellij &>/dev/null || \
+    fail "zellij not installed.  Install with: brew install zellij"
 }
 
 _swarm_require_plan() {
@@ -1639,14 +1639,8 @@ _parse_desc()  {
   echo "$task" | sed "s/.*${agent}//" | sed 's/^[[:space:]]*//'
 }
 
-_open_pane() {
-  local idx="$1" session="$2" agent="$3" desc="$4"
-  if [[ "$idx" -gt 0 ]]; then
-    tmux split-window -t "$session" -h
-    tmux select-layout -t "$session" tiled
-  fi
-  tmux send-keys -t "$session.$idx" \
-    "claude --agent ${agent#@} \"${desc}\"" Enter
+_kdl_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
 cmd_swarm() {
@@ -1656,8 +1650,9 @@ cmd_swarm() {
     full)
       local SESSION="swarm-$(date +%s)"
       header "Swarm  —  Full Plan"
-      _swarm_require_tmux
+      _swarm_require_zellij
       _swarm_require_plan
+      [[ -n "${ZELLIJ:-}" ]] && fail "Already inside Zellij.  Detach first (Ctrl-o d)"
 
       mapfile -t TASKS < <(_extract_tasks)
       [[ ${#TASKS[@]} -eq 0 ]] && \
@@ -1677,17 +1672,22 @@ cmd_swarm() {
       done
       printf "%b\n\n" "$HR"
 
-      tmux new-session -d -s "$SESSION"
+      local LAYOUT; LAYOUT="$(mktemp "${TMPDIR:-/tmp}/ai-squad-layout.XXXXXX.kdl")"
+      printf 'layout {\n' > "$LAYOUT"
       for i in "${!TASKS[@]}"; do
-        task="${TASKS[$i]}"
-        agent=$(_parse_agent "$task")
-        desc=$(_parse_desc  "$task" "$agent")
-        _open_pane "$i" "$SESSION" "$agent" "$desc"
+        task="${TASKS[$i]}"; agent=$(_parse_agent "$task"); desc=$(_parse_desc "$task" "$agent")
+        local _n_esc; _n_esc="$(_kdl_escape "${agent#@}-$((i+1))")"
+        local _a_esc; _a_esc="$(_kdl_escape "${agent#@}")"
+        local _p_esc; _p_esc="$(_kdl_escape "$desc")"
+        printf '    tab name="%s" {\n        pane command="claude" {\n            args "--agent" "%s" "%s"\n        }\n    }\n' \
+          "$_n_esc" "$_a_esc" "$_p_esc" >> "$LAYOUT"
         ok "Launched  ${BCYN}${agent}${R}"
       done
+      printf '}\n' >> "$LAYOUT"
 
       session_info "$SESSION"
-      tmux attach -t "$SESSION"
+      zellij --layout "$LAYOUT" --session "$SESSION"
+      rm -f "$LAYOUT"
       ;;
 
     tasks)
@@ -1696,8 +1696,9 @@ cmd_swarm() {
       local SESSION="swarm-$(date +%s)"
 
       header "Swarm  —  Selected Tasks"
-      _swarm_require_tmux
+      _swarm_require_zellij
       _swarm_require_plan
+      [[ -n "${ZELLIJ:-}" ]] && fail "Already inside Zellij.  Detach first (Ctrl-o d)"
 
       mapfile -t ALL_TASKS < <(_extract_tasks)
       [[ ${#ALL_TASKS[@]} -eq 0 ]] && fail "No tasks found in ${PLAN_FILE}"
@@ -1706,7 +1707,8 @@ cmd_swarm() {
       info "Tasks  " "${TASK_NUMS[*]}"
       printf "\n%b\n" "$HR"
 
-      tmux new-session -d -s "$SESSION"
+      local LAYOUT; LAYOUT="$(mktemp "${TMPDIR:-/tmp}/ai-squad-layout.XXXXXX.kdl")"
+      printf 'layout {\n' > "$LAYOUT"
       local PANE=0 NUM task agent desc
 
       for NUM in "${TASK_NUMS[@]}"; do
@@ -1718,14 +1720,20 @@ cmd_swarm() {
         agent=$(_parse_agent "$task")
         desc=$(_parse_desc  "$task" "$agent")
         task_row "$NUM" "$agent" "$desc"
-        _open_pane "$PANE" "$SESSION" "$agent" "$desc"
+        local _n_esc; _n_esc="$(_kdl_escape "${agent#@}-${NUM}")"
+        local _a_esc; _a_esc="$(_kdl_escape "${agent#@}")"
+        local _p_esc; _p_esc="$(_kdl_escape "$desc")"
+        printf '    tab name="%s" {\n        pane command="claude" {\n            args "--agent" "%s" "%s"\n        }\n    }\n' \
+          "$_n_esc" "$_a_esc" "$_p_esc" >> "$LAYOUT"
         ok "Launched  ${BCYN}${agent}${R}"
         PANE=$((PANE + 1))
       done
+      printf '}\n' >> "$LAYOUT"
 
-      [[ "$PANE" -eq 0 ]] && fail "No valid tasks launched."
+      [[ "$PANE" -eq 0 ]] && { rm -f "$LAYOUT"; fail "No valid tasks launched."; }
       session_info "$SESSION"
-      tmux attach -t "$SESSION"
+      zellij --layout "$LAYOUT" --session "$SESSION"
+      rm -f "$LAYOUT"
       ;;
 
     agent)
@@ -1735,18 +1743,22 @@ cmd_swarm() {
       local SESSION="swarm-$(date +%s)"
 
       header "Swarm  —  Single Agent"
-      _swarm_require_tmux
+      _swarm_require_zellij
+      [[ -n "${ZELLIJ:-}" ]] && fail "Already inside Zellij.  Detach first (Ctrl-o d)"
 
       info "Agent " "$AGENT"
       info "Prompt" "$PROMPT"
 
-      tmux new-session -d -s "$SESSION"
-      tmux send-keys -t "$SESSION" \
-        "claude --agent ${AGENT#@} \"${PROMPT}\"" Enter
+      local LAYOUT; LAYOUT="$(mktemp "${TMPDIR:-/tmp}/ai-squad-layout.XXXXXX.kdl")"
+      local _n_esc; _n_esc="$(_kdl_escape "${AGENT#@}")"
+      local _p_esc; _p_esc="$(_kdl_escape "$PROMPT")"
+      printf 'layout {\n    tab name="%s" focus=true {\n        pane command="claude" {\n            args "--agent" "%s" "%s"\n        }\n    }\n}\n' \
+        "$_n_esc" "$_n_esc" "$_p_esc" > "$LAYOUT"
       ok "Launched ${BCYN}${AGENT}${R}"
 
       session_info "$SESSION"
-      tmux attach -t "$SESSION"
+      zellij --layout "$LAYOUT" --session "$SESSION"
+      rm -f "$LAYOUT"
       ;;
 
     help | *)
@@ -1784,7 +1796,7 @@ cmd_help() {
   printf "  ${D}    Create GitHub issue labels for the squad pipeline${R}\n\n"
 
   printf "  ${BCYN}swarm${R}   ${D}<full | tasks <n...> | agent <@name> <prompt>>${R}\n"
-  printf "  ${D}    Launch agents in parallel tmux panes (Claude Code only)${R}\n"
+  printf "  ${D}    Launch agents in parallel Zellij tabs (Claude Code only)${R}\n"
   printf "  ${D}    Run: ai-squad swarm help  for details${R}\n\n"
 
   printf "%b\n" "$HR"
