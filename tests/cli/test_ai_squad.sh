@@ -260,7 +260,7 @@ printf 'done\n' > "$MOCK_DIR/.swarm/$MOCK_SESSION/agents/typescript-1/status"
 printf '0\n'    > "$MOCK_DIR/.swarm/$MOCK_SESSION/agents/typescript-1/exit_code"
 printf 'swarm/%s/typescript-1\n' "$MOCK_SESSION" \
   > "$MOCK_DIR/.swarm/$MOCK_SESSION/agents/typescript-1/branch"
-STATUS_OUT=$( cd "$MOCK_DIR" && "$CLI" swarm status 2>&1 || true )
+STATUS_OUT=$( cd "$MOCK_DIR" || exit; "$CLI" swarm status 2>&1 || true )
 if printf '%s' "$STATUS_OUT" | grep -q 'typescript-1'; then
   ok "swarm status reads mock session agent data"
 else
